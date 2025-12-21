@@ -27,7 +27,7 @@ const WhatIsSection = () => {
   };
 
   return (
-    <section id="quests" className="py-20 md:py-28 relative overflow-hidden bg-background">
+    <section id="quests" className="py-24 md:py-32 lg:py-40 relative overflow-hidden bg-background">
       <motion.div 
         ref={sectionRef}
         className="container mx-auto px-6 relative z-10"

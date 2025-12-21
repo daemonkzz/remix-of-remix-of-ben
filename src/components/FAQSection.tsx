@@ -64,7 +64,7 @@ const FAQSection = () => {
   };
 
   return (
-    <section id="faq" className="py-24 md:py-32">
+    <section id="faq" className="py-24 md:py-32 lg:py-40">
       <motion.div 
         ref={sectionRef}
         className="container mx-auto px-6"

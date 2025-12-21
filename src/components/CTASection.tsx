@@ -7,7 +7,7 @@ const CTASection = () => {
   const { ref: sectionRef, isVisible } = useScrollReveal({ threshold: 0.2 });
 
   return (
-    <section className="py-16 md:py-24 relative overflow-hidden">
+    <section className="py-24 md:py-32 lg:py-40 relative overflow-hidden">
       <motion.div 
         ref={sectionRef}
         className="container mx-auto px-6 relative z-10"

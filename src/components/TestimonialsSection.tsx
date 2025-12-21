@@ -49,7 +49,7 @@ const TestimonialsSection = () => {
   };
 
   return (
-    <section id="testimonials" className="py-24 md:py-32 relative overflow-hidden">
+    <section id="testimonials" className="py-24 md:py-32 lg:py-40 relative overflow-hidden">
       <div ref={sectionRef} className="container mx-auto px-6">
         {/* Section Title */}
         <motion.div
@@ -187,19 +187,36 @@ const TestimonialsSection = () => {
 
         {/* Update Notes Section */}
         <motion.div
-          className="mt-32 md:mt-40"
-          initial={{ opacity: 0, y: 30 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.5 }}
+          className="mt-24 md:mt-32 lg:mt-40"
+          initial={{ opacity: 0 }}
+          animate={isVisible ? { opacity: 1 } : {}}
+          transition={{ duration: 0.8, delay: 0.3 }}
         >
-          {/* Title - matching site style */}
-          <h3 className="font-display text-[42px] md:text-[56px] lg:text-[70px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold mb-12 md:mb-16">
+          {/* Title - matching site style with enhanced animation */}
+          <motion.h3 
+            className="font-display text-[42px] md:text-[56px] lg:text-[70px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold mb-10 md:mb-14"
+            initial={{ opacity: 0, x: -50 }}
+            animate={isVisible ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
+          >
             UPDATE<br />
-            <span className="text-primary">NOTES</span>
-          </h3>
+            <motion.span 
+              className="text-primary"
+              animate={isVisible ? {
+                textShadow: [
+                  "0 0 20px hsl(var(--primary) / 0.3)",
+                  "0 0 40px hsl(var(--primary) / 0.6)",
+                  "0 0 20px hsl(var(--primary) / 0.3)",
+                ],
+              } : {}}
+              transition={{ duration: 2.5, repeat: Infinity }}
+            >
+              NOTES
+            </motion.span>
+          </motion.h3>
 
-          {/* Update Notes Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          {/* Update Notes Cards Grid - Mobile optimized with 2 columns */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             {[
               { version: "v1.2.0", title: "Yeni Bulmacalar Eklendi", date: "15 Ocak 2025" },
               { version: "v1.1.5", title: "Performans İyileştirmeleri", date: "10 Ocak 2025" },
@@ -207,45 +224,83 @@ const TestimonialsSection = () => {
             ].map((note, index) => (
               <motion.div
                 key={index}
-                className="bg-[#1a1a1a] rounded-2xl overflow-hidden border border-white/[0.06] cursor-pointer group"
-                initial={{ opacity: 0, y: 30 }}
-                animate={isVisible ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: 0.6 + index * 0.1 }}
-                whileHover={{ y: -8, borderColor: "hsl(var(--primary) / 0.3)" }}
+                className="bg-[#1a1a1a] rounded-xl sm:rounded-2xl overflow-hidden border border-white/[0.06] cursor-pointer group relative"
+                initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                animate={isVisible ? { opacity: 1, y: 0, scale: 1 } : {}}
+                transition={{ 
+                  duration: 0.6, 
+                  delay: 0.5 + index * 0.12,
+                  ease: [0.25, 0.46, 0.45, 0.94]
+                }}
+                whileHover={{ 
+                  y: -10, 
+                  scale: 1.02,
+                  transition: { duration: 0.3 }
+                }}
               >
+                {/* Hover glow effect */}
+                <motion.div 
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{
+                    background: "radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
+                  }}
+                />
+                
                 {/* Image placeholder - top half */}
-                <div className="aspect-[4/3] bg-gradient-to-br from-secondary/40 to-secondary/20 relative overflow-hidden">
-                  <div 
-                    className="absolute inset-0 opacity-20"
+                <div className="aspect-[4/3] sm:aspect-[4/3] bg-gradient-to-br from-secondary/50 to-secondary/20 relative overflow-hidden">
+                  {/* Animated background pattern */}
+                  <motion.div 
+                    className="absolute inset-0"
                     style={{
-                      backgroundImage: "radial-gradient(circle at 30% 70%, hsl(var(--primary) / 0.4) 0%, transparent 50%)",
+                      backgroundImage: "radial-gradient(circle at 30% 70%, hsl(var(--primary) / 0.3) 0%, transparent 50%)",
                     }}
+                    animate={isVisible ? {
+                      opacity: [0.2, 0.4, 0.2],
+                    } : {}}
+                    transition={{ duration: 3, repeat: Infinity, delay: index * 0.3 }}
                   />
+                  
+                  {/* Shimmer effect */}
+                  <motion.div 
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                    style={{
+                      background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
+                    }}
+                    animate={{ x: ["-100%", "200%"] }}
+                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                  />
+                  
                   {/* Version badge */}
-                  <div className="absolute top-4 left-4 bg-primary/90 text-background text-xs font-bold px-3 py-1 rounded-full">
+                  <motion.div 
+                    className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-primary/90 text-background text-[9px] sm:text-xs font-bold px-2 py-0.5 sm:px-3 sm:py-1 rounded-full"
+                    whileHover={{ scale: 1.1 }}
+                  >
                     {note.version}
-                  </div>
+                  </motion.div>
                 </div>
 
                 {/* Content - bottom half */}
-                <div className="p-5 md:p-6">
-                  <p className="text-foreground/40 text-[10px] md:text-xs mb-2">{note.date}</p>
-                  <h4 className="text-foreground font-display text-base md:text-lg italic mb-4 group-hover:text-primary transition-colors duration-300">
+                <div className="p-3 sm:p-4 md:p-5">
+                  <p className="text-foreground/40 text-[9px] sm:text-[10px] md:text-xs mb-1 sm:mb-2">{note.date}</p>
+                  <h4 className="text-foreground font-display text-xs sm:text-sm md:text-base lg:text-lg italic mb-2 sm:mb-3 md:mb-4 group-hover:text-primary transition-colors duration-300 line-clamp-2">
                     {note.title}
                   </h4>
                   <motion.button
-                    className="text-primary text-xs md:text-sm font-medium flex items-center gap-2 group/btn"
+                    className="text-primary text-[10px] sm:text-xs md:text-sm font-medium flex items-center gap-1 sm:gap-2 group/btn"
                     whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     Devamını Oku
-                    <svg 
-                      className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-1" 
+                    <motion.svg 
+                      className="w-3 h-3 sm:w-4 sm:h-4" 
                       fill="none" 
                       stroke="currentColor" 
                       viewBox="0 0 24 24"
+                      animate={{ x: [0, 3, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    </motion.svg>
                   </motion.button>
                 </div>
               </motion.div>
