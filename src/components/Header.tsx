@@ -93,39 +93,24 @@ const Header = () => {
                 transition={{ delay: 0.4, duration: 0.5 }}
                 whileHover={{ scale: 1.08 }}
               >
-                {/* Logo glow background */}
+                {/* Logo glow background - runs once */}
                 <motion.div
                   className="absolute inset-0 -m-4 rounded-full pointer-events-none"
-                  animate={{
-                    background: [
-                      "radial-gradient(circle, hsl(var(--primary) / 0) 0%, transparent 70%)",
-                      "radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%)",
-                      "radial-gradient(circle, hsl(var(--primary) / 0) 0%, transparent 70%)",
-                    ],
-                  }}
-                  transition={{ duration: 3, repeat: Infinity }}
+                  initial={{ background: "radial-gradient(circle, hsl(var(--primary) / 0) 0%, transparent 70%)" }}
+                  animate={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.1) 0%, transparent 70%)" }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
                 />
-                <motion.span 
-                  className="text-primary font-display text-[9px] tracking-[0.25em] leading-none mb-1"
-                  animate={{ opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
+                <span className="text-primary font-display text-[9px] tracking-[0.25em] leading-none mb-1">
                   P O R T A L
-                </motion.span>
+                </span>
                 <div className="flex flex-col items-center leading-none">
                   <div className="flex items-center">
                     <span className="text-foreground font-display text-[22px] tracking-tight">ESC</span>
                     <motion.span 
                       className="text-primary font-display text-[22px] mx-0.5"
-                      animate={{ 
-                        textShadow: [
-                          "0 0 10px hsl(var(--primary) / 0.5)",
-                          "0 0 30px hsl(var(--primary) / 1)",
-                          "0 0 10px hsl(var(--primary) / 0.5)",
-                        ],
-                        scale: [1, 1.1, 1],
-                      }}
-                      transition={{ duration: 2, repeat: Infinity }}
+                      initial={{ textShadow: "0 0 0px transparent", scale: 0.8 }}
+                      animate={{ textShadow: "0 0 20px hsl(var(--primary) / 0.7)", scale: 1 }}
+                      transition={{ duration: 1, ease: "easeOut" }}
                     >
                       @
                     </motion.span>

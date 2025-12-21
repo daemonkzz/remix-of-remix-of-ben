@@ -68,31 +68,6 @@ const FAQSection = () => {
 
   return (
     <section id="faq" className="py-16 md:py-24 lg:py-28 relative overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <motion.div
-          className="absolute top-1/4 -left-32 w-64 h-64 rounded-full"
-          style={{
-            background: "radial-gradient(circle, hsl(var(--primary) / 0.08) 0%, transparent 70%)",
-          }}
-          animate={{ 
-            x: [0, 30, 0],
-            opacity: [0.5, 0.8, 0.5],
-          }}
-          transition={{ duration: 8, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 -right-32 w-64 h-64 rounded-full"
-          style={{
-            background: "radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 70%)",
-          }}
-          animate={{ 
-            x: [0, -30, 0],
-            opacity: [0.4, 0.7, 0.4],
-          }}
-          transition={{ duration: 10, repeat: Infinity, delay: 2 }}
-        />
-      </div>
 
       <motion.div 
         ref={sectionRef}
