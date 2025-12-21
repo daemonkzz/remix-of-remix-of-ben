@@ -111,6 +111,7 @@ const TestimonialsSection = () => {
             <AnimatePresence mode="sync">
               {testimonialCards.map((card, index) => {
                 const style = getCardStyle(index);
+                const isCenter = style.zIndex === 10;
                 return (
                   <motion.div
                     key={card.id}
@@ -139,6 +140,25 @@ const TestimonialsSection = () => {
                       originY: 1,
                     }}
                   >
+                    {/* Center card glow effect */}
+                    {isCenter && (
+                      <motion.div
+                        className="absolute -inset-4 rounded-[24px] pointer-events-none -z-10"
+                        style={{
+                          background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.4) 0%, hsl(var(--primary) / 0.15) 40%, transparent 70%)",
+                        }}
+                        animate={{
+                          opacity: [0.4, 0.7, 0.4],
+                          scale: [1, 1.05, 1],
+                        }}
+                        transition={{
+                          duration: 3,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                      />
+                    )}
+                    
                     {/* Testimonial Image - 16:9 aspect */}
                     <img
                       src={card.image}
