@@ -108,10 +108,27 @@ const TestimonialsSection = () => {
         >
           {/* Cards Container - 16:9 aspect ratio cards */}
           <div className="flex justify-center items-end relative h-[200px] md:h-[280px] lg:h-[320px]">
+            {/* Center card glow effect - separate from cards */}
+            <motion.div
+              className="absolute w-[300px] md:w-[420px] lg:w-[500px] aspect-video rounded-[24px] pointer-events-none"
+              style={{
+                background: "radial-gradient(ellipse at center, rgba(234, 179, 8, 0.35) 0%, rgba(234, 179, 8, 0.12) 50%, transparent 75%)",
+                filter: "blur(20px)",
+              }}
+              animate={{
+                opacity: [0.5, 0.8, 0.5],
+                scale: [1, 1.08, 1],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+            
             <AnimatePresence mode="sync">
               {testimonialCards.map((card, index) => {
                 const style = getCardStyle(index);
-                const isCenter = style.zIndex === 10;
                 return (
                   <motion.div
                     key={card.id}
@@ -140,25 +157,6 @@ const TestimonialsSection = () => {
                       originY: 1,
                     }}
                   >
-                    {/* Center card glow effect */}
-                    {isCenter && (
-                      <motion.div
-                        className="absolute -inset-4 rounded-[24px] pointer-events-none -z-10"
-                        style={{
-                          background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.4) 0%, hsl(var(--primary) / 0.15) 40%, transparent 70%)",
-                        }}
-                        animate={{
-                          opacity: [0.4, 0.7, 0.4],
-                          scale: [1, 1.05, 1],
-                        }}
-                        transition={{
-                          duration: 3,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                      />
-                    )}
-                    
                     {/* Testimonial Image - 16:9 aspect */}
                     <img
                       src={card.image}
