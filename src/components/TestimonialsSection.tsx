@@ -1,12 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import testimonialBg from "@/assets/testimonial-bg.png";
 
 // Add your testimonial images here
+// (Using a bundled placeholder image so it always renders. Replace per card as needed.)
 const testimonialCards = [
-  { id: 1, image: "/testimonial-1.jpg" },
-  { id: 2, image: "/testimonial-2.jpg" },
-  { id: 3, image: "/testimonial-3.jpg" },
+  { id: 1, image: testimonialBg },
+  { id: 2, image: testimonialBg },
+  { id: 3, image: testimonialBg },
 ];
 
 const TestimonialsSection = () => {
@@ -29,8 +31,9 @@ const TestimonialsSection = () => {
       { x: 0, rotate: 0, scale: 1, zIndex: 10, opacity: 1 }, // Center
       { x: 200, rotate: 12, scale: 0.85, zIndex: 1, opacity: 0.7 }, // Right
     ];
-    
-    const relativeIndex = (index - activeIndex + testimonialCards.length) % testimonialCards.length;
+
+    const relativeIndex =
+      (index - activeIndex + testimonialCards.length) % testimonialCards.length;
     return positions[relativeIndex] || positions[0];
   };
 
@@ -38,7 +41,7 @@ const TestimonialsSection = () => {
     <section id="testimonials" className="py-24 md:py-32 relative overflow-hidden">
       <div ref={sectionRef} className="container mx-auto px-6">
         {/* Section Title */}
-        <motion.div 
+        <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 50 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
@@ -50,7 +53,7 @@ const TestimonialsSection = () => {
         </motion.div>
 
         {/* Testimonial Cards - Animated Carousel */}
-        <motion.div 
+        <motion.div
           className="relative max-w-4xl mx-auto mb-0"
           initial={{ opacity: 0 }}
           animate={isVisible ? { opacity: 1 } : {}}
@@ -77,9 +80,8 @@ const TestimonialsSection = () => {
                       stiffness: 300,
                       damping: 30,
                     }}
-                    whileHover={{ 
+                    whileHover={{
                       scale: style.scale * 1.05,
-                      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
                     }}
                     onClick={() => {
                       setDirection(index > activeIndex ? 1 : -1);
@@ -89,25 +91,23 @@ const TestimonialsSection = () => {
                       originY: 1,
                     }}
                   >
-                    {/* Testimonial Image - Full cover that adapts to card shape */}
-                    {card.image ? (
-                      <img 
-                        src={card.image} 
-                        alt={`Testimonial ${card.id}`}
-                        className="absolute inset-0 w-full h-full object-cover rounded-[20px]"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-secondary/50 rounded-[20px]" />
-                    )}
-                    {/* Subtle gradient overlay for depth */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/20 rounded-[20px]" />
+                    {/* Testimonial Image - fills and clips to the tilted card shape */}
+                    <img
+                      src={card.image}
+                      alt={`Testimonial ${card.id}`}
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-cover rounded-[20px]"
+                    />
+
+                    {/* Removed the dark overlay that was reading like a black shadow */}
                   </motion.div>
                 );
               })}
             </AnimatePresence>
-            
+
             {/* Center Card Glow Effect */}
-            <motion.div 
+            <motion.div
               className="absolute bottom-0 w-64 md:w-80 h-72 md:h-[340px] pointer-events-none"
               animate={{
                 boxShadow: [
@@ -124,9 +124,9 @@ const TestimonialsSection = () => {
               style={{ zIndex: 0 }}
             />
           </div>
-          
+
           {/* Portal Glow Effect - Oval Shape */}
-          <motion.div 
+          <motion.div
             className="relative mx-auto -mt-8"
             animate={{
               opacity: [0.8, 1, 0.8],
@@ -162,23 +162,25 @@ const TestimonialsSection = () => {
         </motion.div>
 
         {/* Update Notes Section */}
-        <motion.div 
+        <motion.div
           className="text-center mt-28"
           initial={{ opacity: 0, y: 30 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
-          <h3 className="font-display text-lg md:text-xl text-foreground mb-10 tracking-[0.25em] uppercase">UPDATE NOTES</h3>
+          <h3 className="font-display text-lg md:text-xl text-foreground mb-10 tracking-[0.25em] uppercase">
+            UPDATE NOTES
+          </h3>
           <div className="grid grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto">
             {[1, 2, 3].map((item, index) => (
-              <motion.div 
+              <motion.div
                 key={item}
                 className="aspect-square bg-secondary/30 rounded-[20px] md:rounded-[28px] border border-border/10 cursor-pointer"
                 initial={{ opacity: 0, y: 30 }}
                 animate={isVisible ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: 0.6 + index * 0.1 }}
-                whileHover={{ 
-                  scale: 1.05, 
+                whileHover={{
+                  scale: 1.05,
                   borderColor: "hsl(var(--primary) / 0.3)",
                   backgroundColor: "hsl(var(--secondary) / 0.5)",
                 }}
