@@ -508,8 +508,11 @@ const Kurallar = () => {
     setActiveRule(ruleId);
     const element = sectionRefs.current[ruleId];
     if (element) {
-      const offsetTop = element.offsetTop - 140;
-      window.scrollTo({ top: offsetTop, behavior: "smooth" });
+      // Calculate position to center the element on screen
+      const elementRect = element.getBoundingClientRect();
+      const absoluteElementTop = window.pageYOffset + elementRect.top;
+      const middle = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2);
+      window.scrollTo({ top: middle, behavior: "smooth" });
     }
   };
 
@@ -788,49 +791,109 @@ const Kurallar = () => {
                               <motion.div
                                 key={rule.id}
                                 ref={(el) => (sectionRefs.current[rule.id] = el)}
-                                className={`bg-secondary/30 rounded-2xl p-5 md:p-6 border transition-all duration-300 ${
-                                  activeRule === rule.id
-                                    ? "border-primary/50 bg-secondary/40"
-                                    : "border-border/20 hover:border-primary/30"
-                                }`}
+                                className="relative"
                                 initial={{ opacity: 0, y: 10 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                               >
-                                {/* Rule Header */}
-                                <div className="flex items-center gap-3 mb-4">
-                                  <span className="bg-secondary/60 border border-border/40 text-foreground/60 font-mono text-xs px-2.5 py-1 rounded-md">
-                                    {rule.id}
-                                  </span>
-                                  <h5 className="font-display text-lg md:text-xl text-primary italic">
-                                    {searchQuery ? (
-                                      <HighlightText text={rule.title} query={searchQuery} />
-                                    ) : (
-                                      rule.title
-                                    )}
-                                  </h5>
-                                </div>
+                                {/* Animated Glow Background */}
+                                <AnimatePresence>
+                                  {activeRule === rule.id && (
+                                    <motion.div
+                                      className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary/40 via-primary/20 to-primary/40 blur-lg"
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ 
+                                        opacity: [0.5, 0.8, 0.5], 
+                                        scale: 1,
+                                      }}
+                                      exit={{ opacity: 0, scale: 0.95 }}
+                                      transition={{ 
+                                        opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                                        scale: { duration: 0.3 }
+                                      }}
+                                    />
+                                  )}
+                                </AnimatePresence>
 
-                                {/* Rule Description with bullet point */}
-                                <div className="flex items-start gap-3 ml-1">
-                                  <span className="w-2 h-2 rounded-full bg-primary/60 mt-2 flex-shrink-0"></span>
-                                  <p className="text-foreground/80 text-sm md:text-base leading-relaxed">
-                                    {searchQuery ? (
-                                      <HighlightText text={rule.description} query={searchQuery} />
-                                    ) : (
-                                      rule.description
-                                    )}
-                                  </p>
-                                </div>
+                                {/* Animated Border Glow */}
+                                <AnimatePresence>
+                                  {activeRule === rule.id && (
+                                    <motion.div
+                                      className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-primary via-primary/60 to-primary"
+                                      initial={{ opacity: 0 }}
+                                      animate={{ 
+                                        opacity: [0.6, 1, 0.6],
+                                        rotate: [0, 1, 0, -1, 0]
+                                      }}
+                                      exit={{ opacity: 0 }}
+                                      transition={{ 
+                                        opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+                                        rotate: { duration: 0.5, repeat: Infinity, ease: "easeInOut" }
+                                      }}
+                                    />
+                                  )}
+                                </AnimatePresence>
 
-                                {/* Last Update */}
-                                {rule.lastUpdate && (
-                                  <div className="flex justify-end mt-4">
-                                    <span className="text-foreground/30 text-xs font-mono">
-                                      Son güncelleme: {rule.lastUpdate}
+                                {/* Card Content */}
+                                <motion.div
+                                  className={`relative bg-secondary/30 rounded-2xl p-5 md:p-6 border transition-all duration-300 ${
+                                    activeRule === rule.id
+                                      ? "border-primary/70 bg-secondary/50"
+                                      : "border-border/20 hover:border-primary/30"
+                                  }`}
+                                  animate={activeRule === rule.id ? { 
+                                    scale: [1, 1.01, 1],
+                                  } : {}}
+                                  transition={{ 
+                                    scale: { duration: 0.6, repeat: activeRule === rule.id ? Infinity : 0, ease: "easeInOut" }
+                                  }}
+                                >
+                                  {/* Rule Header */}
+                                  <div className="flex items-center gap-3 mb-4">
+                                    <span className={`font-mono text-xs px-2.5 py-1 rounded-md transition-all duration-300 ${
+                                      activeRule === rule.id 
+                                        ? "bg-primary/30 border border-primary/50 text-primary" 
+                                        : "bg-secondary/60 border border-border/40 text-foreground/60"
+                                    }`}>
+                                      {rule.id}
                                     </span>
+                                    <h5 className="font-display text-lg md:text-xl text-primary italic">
+                                      {searchQuery ? (
+                                        <HighlightText text={rule.title} query={searchQuery} />
+                                      ) : (
+                                        rule.title
+                                      )}
+                                    </h5>
                                   </div>
-                                )}
+
+                                  {/* Rule Description with bullet point */}
+                                  <div className="flex items-start gap-3 ml-1">
+                                    <motion.span 
+                                      className="w-2 h-2 rounded-full bg-primary/60 mt-2 flex-shrink-0"
+                                      animate={activeRule === rule.id ? {
+                                        scale: [1, 1.3, 1],
+                                        opacity: [0.6, 1, 0.6]
+                                      } : {}}
+                                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                    />
+                                    <p className="text-foreground/80 text-sm md:text-base leading-relaxed">
+                                      {searchQuery ? (
+                                        <HighlightText text={rule.description} query={searchQuery} />
+                                      ) : (
+                                        rule.description
+                                      )}
+                                    </p>
+                                  </div>
+
+                                  {/* Last Update */}
+                                  {rule.lastUpdate && (
+                                    <div className="flex justify-end mt-4">
+                                      <span className="text-foreground/30 text-xs font-mono">
+                                        Son güncelleme: {rule.lastUpdate}
+                                      </span>
+                                    </div>
+                                  )}
+                                </motion.div>
                               </motion.div>
                             ))}
                           </div>
