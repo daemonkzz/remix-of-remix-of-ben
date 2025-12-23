@@ -110,29 +110,49 @@ const Guncellemeler = () => {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       
-      <main className="container mx-auto px-6 pt-32 pb-20">
+      {/* Background ambient effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          className="absolute top-1/4 left-0 w-[600px] h-[600px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, hsl(var(--primary) / 0.04) 0%, transparent 60%)",
+          }}
+          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
+          transition={{ duration: 20, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-0 w-[500px] h-[500px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, hsl(var(--primary) / 0.03) 0%, transparent 60%)",
+          }}
+          animate={{ x: [0, -40, 0], y: [0, -30, 0] }}
+          transition={{ duration: 15, repeat: Infinity, delay: 5 }}
+        />
+      </div>
+      
+      <main className="container mx-auto px-6 pt-32 pb-24 relative z-10">
         {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-16">
           <div>
             <motion.h1
-              className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-wide"
-              initial={{ opacity: 0, y: 20 }}
+              className="font-display text-5xl md:text-6xl lg:text-7xl font-bold text-foreground tracking-tight italic"
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.6 }}
             >
               GÜNCELLEMELER
             </motion.h1>
             <motion.div
-              className="h-1 w-32 bg-primary mt-3"
+              className="h-1 w-40 bg-primary mt-4"
               initial={{ scaleX: 0, originX: 0 }}
               animate={{ scaleX: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
             />
           </div>
 
           {/* Filter Tabs */}
           <motion.div
-            className="flex items-center gap-6"
+            className="flex items-center gap-8"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
@@ -141,16 +161,16 @@ const Guncellemeler = () => {
               <button
                 key={filter.key}
                 onClick={() => handleFilterChange(filter.key)}
-                className={`relative text-sm tracking-wider transition-colors ${
+                className={`relative text-sm tracking-wider uppercase transition-colors ${
                   activeFilter === filter.key
                     ? "text-primary"
-                    : "text-foreground/50 hover:text-foreground/80"
+                    : "text-foreground/40 hover:text-foreground/70"
                 }`}
               >
                 {activeFilter === filter.key && (
                   <motion.span
                     layoutId="activeFilter"
-                    className="absolute -left-2 -right-2 -top-1 -bottom-1 border border-primary"
+                    className="absolute -left-3 -right-3 -top-1.5 -bottom-1.5 border border-primary"
                     style={{ borderRadius: 2 }}
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
@@ -161,9 +181,9 @@ const Guncellemeler = () => {
           </motion.div>
         </div>
 
-        {/* Updates Grid */}
+        {/* Updates Grid - Larger cards */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
@@ -173,52 +193,90 @@ const Guncellemeler = () => {
               <motion.div
                 key={item.id}
                 layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                className="group relative flex gap-4 bg-card/30 border border-border/30 hover:border-primary/50 transition-all duration-300 overflow-hidden cursor-pointer"
+                transition={{ duration: 0.4, delay: index * 0.08 }}
+                className="group relative bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/[0.06] cursor-pointer"
+                whileHover={{ y: -8, scale: 1.02 }}
               >
-                {/* Image */}
-                <div className="relative w-48 h-32 flex-shrink-0 overflow-hidden">
+                {/* Hover glow effect */}
+                <motion.div 
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10"
+                  style={{
+                    background: "radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
+                  }}
+                />
+                
+                {/* Image - Square aspect */}
+                <div className="relative aspect-[4/3] overflow-hidden">
                   {item.image ? (
                     <img
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                   ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                      <span className="text-muted-foreground text-xs">Görsel Yok</span>
-                    </div>
+                    <div className="w-full h-full bg-gradient-to-br from-secondary/50 to-secondary/20" />
                   )}
-                  {/* Overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/50" />
+                  
+                  {/* Shimmer effect on hover */}
+                  <motion.div 
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                    style={{
+                      background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
+                    }}
+                    animate={{ x: ["-100%", "200%"] }}
+                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                  />
+                  
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
+                  
+                  {/* Version badge - top left */}
+                  {item.version && (
+                    <motion.div 
+                      className="absolute top-4 left-4 bg-primary/90 text-background text-xs font-bold px-3 py-1.5 rounded-full"
+                      whileHover={{ scale: 1.1 }}
+                    >
+                      {item.version}
+                    </motion.div>
+                  )}
+
+                  {/* Category badge - top right */}
+                  <div className="absolute top-4 right-4 text-[10px] uppercase tracking-wider px-2.5 py-1 bg-background/80 backdrop-blur-sm text-primary border border-primary/30">
+                    {item.category === "update" ? "Güncelleme" : "Haber"}
+                  </div>
                 </div>
 
                 {/* Content */}
-                <div className="flex flex-col justify-center py-3 pr-4 flex-1">
-                  {/* Version Badge (if exists) */}
-                  {item.version && (
-                    <span className="text-[10px] text-primary/80 font-medium tracking-wider mb-1">
-                      {item.version}
-                    </span>
-                  )}
-                  
-                  {/* Category Badge */}
-                  <span className="inline-block w-fit text-[10px] uppercase tracking-wider px-2 py-0.5 bg-primary/20 text-primary border border-primary/30 mb-2">
-                    {item.category === "update" ? "Güncelleme" : "Haber"}
-                  </span>
-
-                  {/* Title */}
-                  <h3 className="text-sm font-medium text-foreground/90 group-hover:text-foreground transition-colors line-clamp-2">
+                <div className="p-5 lg:p-6">
+                  {/* Title - Big and prominent */}
+                  <h3 className="font-display text-xl lg:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 italic leading-tight mb-4">
                     {item.title}
                   </h3>
-                </div>
 
-                {/* Date */}
-                <div className="absolute bottom-3 right-4 text-xs text-foreground/40">
-                  {item.date}
+                  {/* Footer with date */}
+                  <div className="flex items-center justify-between">
+                    <motion.button
+                      className="text-primary text-sm font-medium flex items-center gap-2"
+                      whileHover={{ x: 4 }}
+                    >
+                      Devamını Oku
+                      <motion.svg 
+                        className="w-4 h-4" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                        animate={{ x: [0, 3, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </motion.svg>
+                    </motion.button>
+                    
+                    <span className="text-sm text-foreground/40">{item.date}</span>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -228,7 +286,7 @@ const Guncellemeler = () => {
         {/* Pagination */}
         {totalPages > 1 && (
           <motion.div
-            className="flex items-center justify-center gap-8 mt-12"
+            className="flex items-center justify-center gap-10 mt-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
@@ -236,21 +294,21 @@ const Guncellemeler = () => {
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="flex items-center gap-2 text-sm text-foreground/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 text-sm uppercase tracking-wider text-foreground/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              PREV
+              Prev
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`w-2 h-2 transition-all ${
+                  className={`h-2 transition-all duration-300 ${
                     currentPage === page
-                      ? "bg-primary w-6"
-                      : "bg-foreground/30 hover:bg-foreground/50"
+                      ? "bg-primary w-8"
+                      : "bg-foreground/20 w-2 hover:bg-foreground/40"
                   }`}
                 />
               ))}
@@ -259,9 +317,9 @@ const Guncellemeler = () => {
             <button
               onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="flex items-center gap-2 text-sm text-foreground/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 text-sm uppercase tracking-wider text-foreground/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              NEXT
+              Next
               <ChevronRight className="w-4 h-4" />
             </button>
           </motion.div>
