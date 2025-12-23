@@ -93,7 +93,7 @@ const FAQSection = () => {
             } : {}}
             transition={{ duration: 3, repeat: Infinity }}
           >
-            FAQ
+            S.S.S
           </motion.h2>
         </motion.div>
 

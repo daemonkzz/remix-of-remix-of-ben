@@ -64,8 +64,7 @@ const WhatIsSection = () => {
             {/* Title */}
             <motion.div className="flex-1" variants={itemVariants}>
               <h2 className="font-display text-[42px] sm:text-[52px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold">
-                WHAT<br />
-                IS <motion.span 
+                <motion.span 
                   className="text-primary"
                   animate={isVisible ? {
                     textShadow: [
@@ -76,8 +75,9 @@ const WhatIsSection = () => {
                   } : {}}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  X PORTAL
-                </motion.span>?
+                  KAZE<span className="text-foreground">-</span>Z
+                </motion.span><br />
+                NEDİR?
               </h2>
             </motion.div>
             
@@ -168,8 +168,7 @@ const WhatIsSection = () => {
           {/* Section Title - Top left, large */}
           <motion.div className="mb-12" variants={itemVariants}>
             <h2 className="font-display text-[72px] xl:text-[88px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold">
-              WHAT<br />
-              IS <motion.span 
+              <motion.span 
                 className="text-primary"
                 animate={isVisible ? {
                   textShadow: [
@@ -180,8 +179,9 @@ const WhatIsSection = () => {
                 } : {}}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                X PORTAL
-              </motion.span>?
+                KAZE<span className="text-foreground">-</span>Z
+              </motion.span><br />
+              NEDİR?
             </h2>
           </motion.div>
 
@@ -190,8 +190,8 @@ const WhatIsSection = () => {
             {/* Left Column - Description + Portal Image */}
             <motion.div className="col-span-5 flex flex-col" variants={itemVariants}>
               {/* Description text - small italic */}
-              <p className="text-foreground/50 text-xs leading-relaxed max-w-[200px] mb-4 italic">
-                An immersive puzzle-based quest that challenges your logic and perception
+              <p className="text-foreground/50 text-xs leading-relaxed max-w-[240px] mb-4 italic">
+                Kaze-Z ile ilgili aklınıza takılan tüm soruları Discord sunucumuzdan yetkililere sorabilirsiniz.
               </p>
               
               {/* Portal Image container */}

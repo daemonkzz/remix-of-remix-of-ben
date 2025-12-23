@@ -115,7 +115,28 @@ const HeroSection = () => {
         }}>
             <motion.h1 className="font-display text-[180px] text-foreground leading-[0.85] tracking-tight mb-8 italic perspective-1000">
               <div className="overflow-visible">
-                {"ESCAPE".split("").map((letter, i) => <motion.span key={`escape-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
+                {"KAZE".split("").map((letter, i) => <motion.span key={`kaze-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
+                scale: 1.1,
+                color: "hsl(var(--primary))",
+                textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
+              }}>
+                    {letter}
+                  </motion.span>)}
+                <motion.span 
+                  key="dash" 
+                  className="inline-block text-primary transition-colors duration-300 hover:text-foreground" 
+                  custom={4} 
+                  variants={letterVariants} 
+                  initial="hidden" 
+                  animate="visible"
+                  whileHover={{
+                    scale: 1.1,
+                    textShadow: "0 0 30px hsl(var(--foreground) / 0.8)"
+                  }}
+                >
+                  -
+                </motion.span>
+                {"Z".split("").map((letter, i) => <motion.span key={`z-${i}`} className="inline-block" custom={i + 5} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
                 scale: 1.1,
                 color: "hsl(var(--primary))",
                 textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
@@ -124,7 +145,7 @@ const HeroSection = () => {
                   </motion.span>)}
               </div>
               <div className="overflow-visible">
-                {"ROOM".split("").map((letter, i) => <motion.span key={`room-${i}`} className="inline-block" custom={i + 6} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
+                {"BAŞLIYOR".split("").map((letter, i) => <motion.span key={`basliyor-${i}`} className="inline-block" custom={i + 6} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
                 scale: 1.1,
                 color: "hsl(var(--primary))",
                 textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
@@ -235,12 +256,25 @@ const HeroSection = () => {
           <motion.div style={{ y: textY }}>
             <motion.h1 className="font-display text-[90px] sm:text-[110px] md:text-[140px] text-foreground leading-[0.85] tracking-tight mb-8 italic perspective-1000">
               <div className="overflow-visible">
-                {"ESCAPE".split("").map((letter, i) => <motion.span key={`escape-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible">
+                {"KAZE".split("").map((letter, i) => <motion.span key={`kaze-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible">
+                    {letter}
+                  </motion.span>)}
+                <motion.span 
+                  key="dash" 
+                  className="inline-block text-primary transition-colors duration-300 hover:text-foreground" 
+                  custom={4} 
+                  variants={letterVariants} 
+                  initial="hidden" 
+                  animate="visible"
+                >
+                  -
+                </motion.span>
+                {"Z".split("").map((letter, i) => <motion.span key={`z-${i}`} className="inline-block" custom={i + 5} variants={letterVariants} initial="hidden" animate="visible">
                     {letter}
                   </motion.span>)}
               </div>
               <div className="overflow-visible">
-                {"ROOM".split("").map((letter, i) => <motion.span key={`room-${i}`} className="inline-block" custom={i + 6} variants={letterVariants} initial="hidden" animate="visible">
+                {"BAŞLIYOR".split("").map((letter, i) => <motion.span key={`basliyor-${i}`} className="inline-block" custom={i + 6} variants={letterVariants} initial="hidden" animate="visible">
                     {letter}
                   </motion.span>)}
               </div>

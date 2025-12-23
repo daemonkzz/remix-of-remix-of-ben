@@ -95,7 +95,7 @@ const TestimonialsSection = () => {
             } : {}}
             transition={{ duration: 4, repeat: Infinity }}
           >
-            THEY'LL TELL<br />YOU BETTER
+            KAZE<br />OBJEKTİFİ
           </motion.h2>
         </motion.div>
 
@@ -253,7 +253,7 @@ const TestimonialsSection = () => {
             animate={isVisible ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
           >
-            UPDATE<br />
+            GÜNCELLEME<br />
             <motion.span 
               className="text-primary"
               animate={isVisible ? {
@@ -265,7 +265,7 @@ const TestimonialsSection = () => {
               } : {}}
               transition={{ duration: 2.5, repeat: Infinity }}
             >
-              NOTES
+              NOTLARI
             </motion.span>
           </motion.h3>
 
