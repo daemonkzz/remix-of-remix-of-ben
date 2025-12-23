@@ -791,61 +791,47 @@ const Kurallar = () => {
                               <motion.div
                                 key={rule.id}
                                 ref={(el) => (sectionRefs.current[rule.id] = el)}
-                                className="relative"
+                                className="relative overflow-hidden rounded-2xl"
                                 initial={{ opacity: 0, y: 10 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                               >
-                                {/* Animated Glow Background */}
-                                <AnimatePresence>
+                                {/* One-time Sweep Glow Effect */}
+                                <AnimatePresence mode="wait">
                                   {activeRule === rule.id && (
                                     <motion.div
-                                      className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary/40 via-primary/20 to-primary/40 blur-lg"
-                                      initial={{ opacity: 0, scale: 0.95 }}
-                                      animate={{ 
-                                        opacity: [0.5, 0.8, 0.5], 
-                                        scale: 1,
-                                      }}
-                                      exit={{ opacity: 0, scale: 0.95 }}
-                                      transition={{ 
-                                        opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                                        scale: { duration: 0.3 }
-                                      }}
-                                    />
-                                  )}
-                                </AnimatePresence>
-
-                                {/* Animated Border Glow */}
-                                <AnimatePresence>
-                                  {activeRule === rule.id && (
-                                    <motion.div
-                                      className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-primary via-primary/60 to-primary"
+                                      key={`glow-${rule.id}-${Date.now()}`}
+                                      className="absolute inset-0 rounded-2xl pointer-events-none"
                                       initial={{ opacity: 0 }}
-                                      animate={{ 
-                                        opacity: [0.6, 1, 0.6],
-                                        rotate: [0, 1, 0, -1, 0]
-                                      }}
+                                      animate={{ opacity: 1 }}
                                       exit={{ opacity: 0 }}
-                                      transition={{ 
-                                        opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
-                                        rotate: { duration: 0.5, repeat: Infinity, ease: "easeInOut" }
-                                      }}
-                                    />
+                                      transition={{ duration: 0.2 }}
+                                    >
+                                      {/* Traveling glow */}
+                                      <motion.div
+                                        className="absolute top-0 left-0 w-full h-full"
+                                        initial={{ x: "-100%" }}
+                                        animate={{ x: "200%" }}
+                                        transition={{ duration: 0.8, ease: "easeOut" }}
+                                      >
+                                        <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-primary/40 to-transparent blur-md" />
+                                      </motion.div>
+                                    </motion.div>
                                   )}
                                 </AnimatePresence>
 
                                 {/* Card Content */}
                                 <motion.div
-                                  className={`relative bg-secondary/30 rounded-2xl p-5 md:p-6 border transition-all duration-300 ${
+                                  className={`relative bg-secondary/30 rounded-2xl p-5 md:p-6 border transition-all duration-500 ${
                                     activeRule === rule.id
-                                      ? "border-primary/70 bg-secondary/50"
+                                      ? "border-primary/60 bg-secondary/50 shadow-[0_0_20px_-5px_hsl(var(--primary)/0.4)]"
                                       : "border-border/20 hover:border-primary/30"
                                   }`}
                                   animate={activeRule === rule.id ? { 
-                                    scale: [1, 1.01, 1],
-                                  } : {}}
+                                    scale: [1, 1.005, 1],
+                                  } : { scale: 1 }}
                                   transition={{ 
-                                    scale: { duration: 0.6, repeat: activeRule === rule.id ? Infinity : 0, ease: "easeInOut" }
+                                    scale: { duration: 0.3, ease: "easeOut" }
                                   }}
                                 >
                                   {/* Rule Header */}
@@ -868,14 +854,7 @@ const Kurallar = () => {
 
                                   {/* Rule Description with bullet point */}
                                   <div className="flex items-start gap-3 ml-1">
-                                    <motion.span 
-                                      className="w-2 h-2 rounded-full bg-primary/60 mt-2 flex-shrink-0"
-                                      animate={activeRule === rule.id ? {
-                                        scale: [1, 1.3, 1],
-                                        opacity: [0.6, 1, 0.6]
-                                      } : {}}
-                                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                                    />
+                                    <span className="w-2 h-2 rounded-full bg-primary/60 mt-2 flex-shrink-0" />
                                     <p className="text-foreground/80 text-sm md:text-base leading-relaxed">
                                       {searchQuery ? (
                                         <HighlightText text={rule.description} query={searchQuery} />
