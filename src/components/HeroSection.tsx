@@ -233,7 +233,7 @@ const HeroSection = () => {
         <div className="lg:hidden pb-8 pt-8">
           {/* Title */}
           <motion.div style={{ y: textY }}>
-            <motion.h1 className="font-display text-[70px] sm:text-[90px] md:text-[120px] text-foreground leading-[0.85] tracking-tight mb-6 italic perspective-1000">
+            <motion.h1 className="font-display text-[90px] sm:text-[110px] md:text-[140px] text-foreground leading-[0.85] tracking-tight mb-8 italic perspective-1000">
               <div className="overflow-visible">
                 {"ESCAPE".split("").map((letter, i) => <motion.span key={`escape-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible">
                     {letter}
@@ -255,35 +255,35 @@ const HeroSection = () => {
             transition={{ duration: 0.8, delay: 1.5 }}
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="glow" size="default" className="text-sm px-6 font-medium">
+              <Button variant="glow" size="lg" className="text-base px-8 py-3 font-medium">
                 Başvur <span className="ml-1.5">↗</span>
               </Button>
             </motion.div>
 
             {/* Compact Server Status Card */}
             <motion.div 
-              className="bg-card/80 backdrop-blur-sm border border-border/30 rounded-xl p-2.5 relative overflow-hidden"
+              className="bg-card/80 backdrop-blur-sm border border-border/30 rounded-xl p-3.5 relative overflow-hidden"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 1.4 }}
             >
-              <div className="relative z-10 flex items-center gap-2">
-                <img src={logo} alt="Logo" className="w-7 h-7 object-contain" />
+              <div className="relative z-10 flex items-center gap-3">
+                <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
                 <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <motion.div 
-                      className="w-2 h-2 rounded-full bg-primary"
+                      className="w-2.5 h-2.5 rounded-full bg-primary"
                       animate={{
-                        boxShadow: ["0 0 0px hsl(var(--primary) / 0)", "0 0 8px hsl(var(--primary) / 0.8)", "0 0 0px hsl(var(--primary) / 0)"]
+                        boxShadow: ["0 0 0px hsl(var(--primary) / 0)", "0 0 10px hsl(var(--primary) / 0.8)", "0 0 0px hsl(var(--primary) / 0)"]
                       }}
                       transition={{
                         duration: 1.5,
                         repeat: Infinity
                       }}
                     />
-                    <span className="text-foreground text-[10px] font-medium">Aktif</span>
+                    <span className="text-foreground text-sm font-medium">Aktif</span>
                   </div>
-                  <span className="text-primary text-[9px] font-medium">75/300</span>
+                  <span className="text-primary text-xs font-medium">75/300</span>
                 </div>
               </div>
             </motion.div>
