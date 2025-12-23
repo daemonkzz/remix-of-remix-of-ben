@@ -21,9 +21,9 @@ const AnimatedLogo = ({ size = "md", className = "" }: AnimatedLogoProps) => {
   };
 
   const iconSizes = {
-    sm: 20,
-    md: 24,
-    lg: 28,
+    sm: 30,
+    md: 36,
+    lg: 42,
   };
 
   // On homepage, just show the logo with normal hover effect
