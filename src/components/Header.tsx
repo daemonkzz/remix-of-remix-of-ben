@@ -175,6 +175,16 @@ const Header = () => {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
+              <motion.a 
+                href="/"
+                className="block py-3 px-4 text-foreground font-medium hover:text-primary transition-colors text-sm" 
+                onClick={() => setIsMenuOpen(false)}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0 }}
+              >
+                Anasayfa
+              </motion.a>
               {["Kurallar", "Güncellemeler", "Hikaye", "Harita"].map((link, index) => (
                 <motion.a 
                   key={link}
@@ -183,7 +193,7 @@ const Header = () => {
                   onClick={() => setIsMenuOpen(false)}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: (index + 1) * 0.1 }}
                 >
                   {link}
                 </motion.a>
