@@ -158,7 +158,7 @@ const CTASection = () => {
                   }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  Book now
+                  Başvur
                 </motion.span>
                 <motion.span 
                   className="ml-2 relative z-10"
