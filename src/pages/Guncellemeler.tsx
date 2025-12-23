@@ -197,7 +197,7 @@ const Guncellemeler = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="group relative bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/[0.06] cursor-pointer"
+                className="group relative bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/[0.06] cursor-pointer flex flex-col"
                 whileHover={{ y: -8, scale: 1.02 }}
               >
                 {/* Hover glow effect */}
@@ -208,7 +208,7 @@ const Guncellemeler = () => {
                   }}
                 />
                 
-                {/* Image - Square aspect */}
+                {/* Image */}
                 <div className="relative aspect-[4/3] overflow-hidden">
                   {item.image ? (
                     <img
@@ -233,15 +233,17 @@ const Guncellemeler = () => {
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
                   
-                  {/* Version badge - top left */}
-                  {item.version && (
-                    <motion.div 
-                      className="absolute top-4 left-4 bg-primary/90 text-background text-xs font-bold px-3 py-1.5 rounded-full"
-                      whileHover={{ scale: 1.1 }}
-                    >
-                      {item.version}
-                    </motion.div>
-                  )}
+                  {/* Version badge - top left (placeholder space if no version) */}
+                  <div className="absolute top-4 left-4 h-7">
+                    {item.version && (
+                      <motion.div 
+                        className="bg-primary/90 text-background text-xs font-bold px-3 py-1.5 rounded-full"
+                        whileHover={{ scale: 1.1 }}
+                      >
+                        {item.version}
+                      </motion.div>
+                    )}
+                  </div>
 
                   {/* Category badge - top right */}
                   <div className="absolute top-4 right-4 text-[10px] uppercase tracking-wider px-2.5 py-1 bg-background/80 backdrop-blur-sm text-primary border border-primary/30">
@@ -249,15 +251,17 @@ const Guncellemeler = () => {
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-5 lg:p-6">
-                  {/* Title - Big and prominent */}
-                  <h3 className="font-display text-xl lg:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 italic leading-tight mb-4">
-                    {item.title}
-                  </h3>
+                {/* Content - flex-grow to push footer to bottom */}
+                <div className="p-5 lg:p-6 flex flex-col flex-grow">
+                  {/* Title - Fixed height area */}
+                  <div className="flex-grow min-h-[72px]">
+                    <h3 className="font-display text-xl lg:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 italic leading-tight line-clamp-2">
+                      {item.title}
+                    </h3>
+                  </div>
 
-                  {/* Footer with date */}
-                  <div className="flex items-center justify-between">
+                  {/* Footer - Always at bottom */}
+                  <div className="flex items-center justify-between pt-4 border-t border-white/[0.06] mt-auto">
                     <motion.button
                       className="text-primary text-sm font-medium flex items-center gap-2"
                       whileHover={{ x: 4 }}
