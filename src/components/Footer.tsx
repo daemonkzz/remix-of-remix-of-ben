@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { Link } from "react-router-dom";
-import logo from "@/assets/logo.png";
+import AnimatedLogo from "@/components/AnimatedLogo";
 
 const Footer = () => {
   const { ref: footerRef, isVisible } = useScrollReveal({ threshold: 0.2 });
@@ -92,13 +92,9 @@ const Footer = () => {
             variants={itemVariants}
           >
             {/* Logo - visible on mobile at top */}
-            <motion.a 
-              href="/"
-              className="flex md:hidden items-center justify-center"
-              whileHover={{ scale: 1.05 }}
-            >
-              <img src={logo} alt="Logo" className="h-10 w-auto" />
-            </motion.a>
+            <div className="flex md:hidden items-center justify-center">
+              <AnimatedLogo size="sm" />
+            </div>
             <motion.div whileHover={{ y: -2 }}>
               <Link 
                 to="/kurallar"
@@ -116,13 +112,9 @@ const Footer = () => {
             </motion.a>
             
             {/* Center Logo - hidden on mobile */}
-            <motion.a 
-              href="/"
-              className="hidden md:flex items-center justify-center mx-4"
-              whileHover={{ scale: 1.05 }}
-            >
-              <img src={logo} alt="Logo" className="h-12 w-auto" />
-            </motion.a>
+            <div className="hidden md:flex items-center justify-center mx-4">
+              <AnimatedLogo size="md" />
+            </div>
             
             {["Hikaye", "Harita"].map((link) => (
               <motion.a 

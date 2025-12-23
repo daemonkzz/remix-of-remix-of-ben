@@ -3,7 +3,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import logo from "@/assets/logo.png";
+import AnimatedLogo from "@/components/AnimatedLogo";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -120,23 +120,14 @@ const Header = () => {
               </motion.div>
 
               {/* Center Logo */}
-              <motion.a 
-                href="/"
-                className="flex items-center justify-center mx-6 relative"
+              <motion.div
+                className="mx-6"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
-                whileHover={{ scale: 1.08 }}
               >
-                {/* Logo glow background */}
-                <motion.div
-                  className="absolute inset-0 -m-4 rounded-full pointer-events-none"
-                  initial={{ background: "radial-gradient(circle, hsl(var(--primary) / 0) 0%, transparent 70%)" }}
-                  animate={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.1) 0%, transparent 70%)" }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                />
-                <img src={logo} alt="Logo" className="h-14 w-auto" />
-              </motion.a>
+                <AnimatedLogo size="lg" />
+              </motion.div>
 
               {/* Right Nav Links */}
               {["Hikaye", "Harita"].map((link, index) => (
