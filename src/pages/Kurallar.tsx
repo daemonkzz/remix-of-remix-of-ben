@@ -575,7 +575,58 @@ const Kurallar = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="pt-24 pb-16">
+      {/* Background ambient effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          className="absolute top-1/4 left-0 w-[600px] h-[600px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, hsl(var(--primary) / 0.04) 0%, transparent 60%)",
+          }}
+          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
+          transition={{ duration: 20, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-0 w-[500px] h-[500px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, hsl(var(--primary) / 0.03) 0%, transparent 60%)",
+          }}
+          animate={{ x: [0, -40, 0], y: [0, -30, 0] }}
+          transition={{ duration: 15, repeat: Infinity, delay: 5 }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/3 w-[400px] h-[400px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, hsl(var(--primary) / 0.02) 0%, transparent 60%)",
+          }}
+          animate={{ x: [0, 30, 0], y: [0, -40, 0] }}
+          transition={{ duration: 18, repeat: Infinity, delay: 3 }}
+        />
+        
+        {/* Floating particles */}
+        {[...Array(12)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 rounded-full bg-primary/30"
+            style={{
+              left: `${10 + (i * 7) % 80}%`,
+              top: `${15 + (i * 11) % 70}%`,
+            }}
+            animate={{
+              y: [0, -60, 0],
+              x: [0, (i % 2 === 0 ? 20 : -20), 0],
+              opacity: [0.2, 0.6, 0.2],
+            }}
+            transition={{
+              duration: 12 + (i * 2),
+              repeat: Infinity,
+              delay: i * 1.5,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+      
+      <main className="pt-24 pb-16 relative z-10">
         <div className="container mx-auto px-4 md:px-6">
           {/* Page Title */}
           <motion.div
