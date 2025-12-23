@@ -81,6 +81,80 @@ const HeroSection = () => {
         <div className="absolute bottom-0 left-0 right-0 h-[5%] bg-gradient-to-t from-background to-transparent" />
       </motion.div>
 
+      {/* Logo Glow Effect - Sarı parıltı efekti */}
+      <motion.div 
+        className="absolute pointer-events-none z-[3]"
+        style={{
+          right: '22%',
+          bottom: '32%',
+          width: '280px',
+          height: '280px',
+          background: 'radial-gradient(circle, hsl(45 100% 60% / 0.25) 0%, hsl(40 100% 50% / 0.1) 40%, transparent 70%)',
+          filter: 'blur(40px)',
+        }}
+        animate={{
+          opacity: [0.3, 0.6, 0.3],
+          scale: [0.9, 1.15, 0.9],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      
+      {/* Secondary smaller glow */}
+      <motion.div 
+        className="absolute pointer-events-none z-[3]"
+        style={{
+          right: '24%',
+          bottom: '35%',
+          width: '150px',
+          height: '150px',
+          background: 'radial-gradient(circle, hsl(50 100% 65% / 0.35) 0%, transparent 60%)',
+          filter: 'blur(25px)',
+        }}
+        animate={{
+          opacity: [0.4, 0.7, 0.4],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 0.5
+        }}
+      />
+      
+      {/* Floating sparkles around logo */}
+      {[...Array(5)].map((_, i) => (
+        <motion.div
+          key={`sparkle-${i}`}
+          className="absolute pointer-events-none z-[4]"
+          style={{
+            right: `${20 + i * 3}%`,
+            bottom: `${30 + i * 4}%`,
+            width: '4px',
+            height: '4px',
+            background: 'hsl(50 100% 70%)',
+            borderRadius: '50%',
+            boxShadow: '0 0 10px hsl(50 100% 60% / 0.8), 0 0 20px hsl(45 100% 55% / 0.5)',
+          }}
+          animate={{
+            y: [0, -30 - i * 10, 0],
+            x: [0, (i % 2 === 0 ? 15 : -15), 0],
+            opacity: [0, 0.8, 0],
+            scale: [0.5, 1, 0.5],
+          }}
+          transition={{
+            duration: 3 + i * 0.5,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: i * 0.8
+          }}
+        />
+      ))}
+
       {/* Animated light rays */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div className="absolute top-0 left-1/4 w-[2px] h-full bg-gradient-to-b from-primary/20 via-primary/5 to-transparent" animate={{
