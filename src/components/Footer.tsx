@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Send } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import logo from "@/assets/logo.png";
 
 const Footer = () => {
   const { ref: footerRef, isVisible } = useScrollReveal({ threshold: 0.2 });
@@ -86,30 +87,13 @@ const Footer = () => {
             ))}
             
             {/* Center Logo */}
-            <motion.div 
-              className="flex flex-col items-center mx-4"
+            <motion.a 
+              href="/"
+              className="flex items-center justify-center mx-4"
               whileHover={{ scale: 1.05 }}
             >
-              <span className="text-primary font-display text-[10px] tracking-[0.2em] leading-none mb-0.5">P O R T A L</span>
-              <div className="flex items-center">
-                <span className="text-foreground font-display text-lg tracking-tight leading-none">ESC</span>
-                <motion.span 
-                  className="text-primary font-display text-lg leading-none mx-0.5"
-                  animate={{ 
-                    textShadow: [
-                      "0 0 5px hsl(var(--primary) / 0.3)",
-                      "0 0 15px hsl(var(--primary) / 0.6)",
-                      "0 0 5px hsl(var(--primary) / 0.3)",
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  @
-                </motion.span>
-                <span className="text-foreground font-display text-lg tracking-tight leading-none">PE</span>
-              </div>
-              <span className="text-foreground font-display text-lg tracking-tight leading-none -mt-0.5">ROOM</span>
-            </motion.div>
+              <img src={logo} alt="Logo" className="h-8 w-auto" />
+            </motion.a>
             
             {["Testimonials", "FAQ"].map((link) => (
               <motion.a 

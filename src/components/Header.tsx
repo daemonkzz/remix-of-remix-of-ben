@@ -3,6 +3,7 @@ import { Menu, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/assets/logo.png";
+import hayalImage from "@/assets/hayal.jpg";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -36,8 +37,16 @@ const Header = () => {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
+      style={{
+        backgroundImage: !isScrolled ? `url(${hayalImage})` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+      }}
     >
-      <div className="container mx-auto px-6 py-4">
+      {/* Overlay for better text visibility */}
+      <div className={`absolute inset-0 ${!isScrolled ? 'bg-background/70' : ''}`} />
+      
+      <div className="container mx-auto px-6 py-4 relative z-10">
         <div className="flex items-center justify-between">
           {/* Social Icons - Left */}
           <div className="flex items-center gap-2 flex-shrink-0">
