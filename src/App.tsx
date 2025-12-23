@@ -8,6 +8,7 @@ import Kurallar from "./pages/Kurallar";
 import Guncellemeler from "./pages/Guncellemeler";
 import GuncellemeDetay from "./pages/GuncellemeDetay";
 import Hikaye from "./pages/Hikaye";
+import Basvuru from "./pages/Basvuru";
 import NotFound from "./pages/NotFound";
 import AmbientParticles from "./components/AmbientParticles";
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/guncellemeler" element={<Guncellemeler />} />
           <Route path="/guncellemeler/:id" element={<GuncellemeDetay />} />
           <Route path="/hikaye" element={<Hikaye />} />
+          <Route path="/basvuru" element={<Basvuru />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
