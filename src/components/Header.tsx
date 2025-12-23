@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import logo from "@/assets/logo.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -86,39 +87,23 @@ const Header = () => {
               ))}
 
               {/* Center Logo */}
-              <motion.div 
-                className="flex flex-col items-center mx-6 relative"
+              <motion.a 
+                href="/"
+                className="flex items-center justify-center mx-6 relative"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
                 whileHover={{ scale: 1.08 }}
               >
-                {/* Logo glow background - runs once */}
+                {/* Logo glow background */}
                 <motion.div
                   className="absolute inset-0 -m-4 rounded-full pointer-events-none"
                   initial={{ background: "radial-gradient(circle, hsl(var(--primary) / 0) 0%, transparent 70%)" }}
                   animate={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.1) 0%, transparent 70%)" }}
                   transition={{ duration: 1.5, ease: "easeOut" }}
                 />
-                <span className="text-primary font-display text-[9px] tracking-[0.25em] leading-none mb-1">
-                  P O R T A L
-                </span>
-                <div className="flex flex-col items-center leading-none">
-                  <div className="flex items-center">
-                    <span className="text-foreground font-display text-[22px] tracking-tight">ESC</span>
-                    <motion.span 
-                      className="text-primary font-display text-[22px] mx-0.5"
-                      initial={{ textShadow: "0 0 0px transparent", scale: 0.8 }}
-                      animate={{ textShadow: "0 0 20px hsl(var(--primary) / 0.7)", scale: 1 }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                    >
-                      @
-                    </motion.span>
-                    <span className="text-foreground font-display text-[22px] tracking-tight">PE</span>
-                  </div>
-                  <span className="text-foreground font-display text-[22px] tracking-tight -mt-1">ROOM</span>
-                </div>
-              </motion.div>
+                <img src={logo} alt="Logo" className="h-10 w-auto" />
+              </motion.a>
 
               {/* Right Nav Links */}
               {["Hikaye", "Harita"].map((link, index) => (
