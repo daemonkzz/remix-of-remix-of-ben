@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 
 const Header = () => {
@@ -89,20 +90,31 @@ const Header = () => {
           <div className="hidden lg:flex items-center justify-center flex-1">
             <div className="flex items-center gap-8">
               {/* Left Nav Links */}
-              {["Kurallar", "Güncellemeler"].map((link, index) => (
-                <motion.a 
-                  key={link}
-                  href={`#${link.toLowerCase()}`} 
+              <motion.div
+                variants={navLinkVariants}
+                initial="initial"
+                animate="animate"
+                whileHover="hover"
+                transition={{ delay: 0.3 }}
+              >
+                <Link 
+                  to="/kurallar"
                   className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
-                  variants={navLinkVariants}
-                  initial="initial"
-                  animate="animate"
-                  whileHover="hover"
-                  transition={{ delay: 0.3 + index * 0.1 }}
                 >
-                  {link}
-                </motion.a>
-              ))}
+                  Kurallar
+                </Link>
+              </motion.div>
+              <motion.a 
+                href="#güncellemeler" 
+                className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
+                variants={navLinkVariants}
+                initial="initial"
+                animate="animate"
+                whileHover="hover"
+                transition={{ delay: 0.4 }}
+              >
+                Güncellemeler
+              </motion.a>
 
               {/* Center Logo */}
               <motion.a 
@@ -185,7 +197,20 @@ const Header = () => {
               >
                 Anasayfa
               </motion.a>
-              {["Kurallar", "Güncellemeler", "Hikaye", "Harita"].map((link, index) => (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Link 
+                  to="/kurallar"
+                  className="block py-3 px-4 text-foreground/70 hover:text-primary transition-colors text-sm"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Kurallar
+                </Link>
+              </motion.div>
+              {["Güncellemeler", "Hikaye", "Harita"].map((link, index) => (
                 <motion.a 
                   key={link}
                   href={`#${link.toLowerCase()}`} 
@@ -193,7 +218,7 @@ const Header = () => {
                   onClick={() => setIsMenuOpen(false)}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: (index + 1) * 0.1 }}
+                  transition={{ delay: (index + 2) * 0.1 }}
                 >
                   {link}
                 </motion.a>

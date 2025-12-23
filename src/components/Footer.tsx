@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 
 const Footer = () => {
@@ -98,16 +99,21 @@ const Footer = () => {
             >
               <img src={logo} alt="Logo" className="h-10 w-auto" />
             </motion.a>
-            {["Kurallar", "Güncellemeler"].map((link) => (
-              <motion.a 
-                key={link}
-                href={`#${link.toLowerCase()}`} 
+            <motion.div whileHover={{ y: -2 }}>
+              <Link 
+                to="/kurallar"
                 className="text-foreground/40 hover:text-foreground transition-colors text-xs tracking-wider font-light"
-                whileHover={{ y: -2 }}
               >
-                {link}
-              </motion.a>
-            ))}
+                Kurallar
+              </Link>
+            </motion.div>
+            <motion.a 
+              href="#güncellemeler"
+              className="text-foreground/40 hover:text-foreground transition-colors text-xs tracking-wider font-light"
+              whileHover={{ y: -2 }}
+            >
+              Güncellemeler
+            </motion.a>
             
             {/* Center Logo - hidden on mobile */}
             <motion.a 
