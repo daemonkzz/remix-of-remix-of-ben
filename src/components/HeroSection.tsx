@@ -73,7 +73,7 @@ const HeroSection = () => {
 
       {/* Background Image with Parallax */}
       <motion.div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{
-      backgroundImage: "url(\"/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg\")",
+      backgroundImage: `url(${heroBg})`,
       y: backgroundY,
       scale: backgroundScale
     }}>
