@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Map, BookOpen, Info, ChevronUp } from "lucide-react";
+import { Map, BookOpen, Info, ChevronUp, Sparkles } from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,
@@ -13,7 +13,7 @@ const storyContent = [
   {
     id: "giris",
     title: "GİRİŞ",
-    content: `Buraya hikayenin giriş bölümü gelecek. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.`
+    content: `Buraya hikayenin giriş bölümü gelecek. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.`
   },
   {
     id: "bolum-1",
@@ -37,20 +37,57 @@ const storyContent = [
   }
 ];
 
+// Floating particles generator
+const generateFloatingParticles = (count: number) => {
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: 2 + Math.random() * 3,
+    duration: 15 + Math.random() * 20,
+    delay: Math.random() * 5
+  }));
+};
+
 const Hikaye = () => {
   const [activeTab, setActiveTab] = useState<"whimsical" | "hikaye">("whimsical");
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState("giris");
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const particles = useMemo(() => generateFloatingParticles(20), []);
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.6,
+        ease: [0.25, 0.46, 0.45, 0.94],
+      },
+    },
+  };
 
   useEffect(() => {
-    if (activeTab !== "hikaye") return;
-
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      setScrollProgress(progress);
+      
+      if (activeTab === "hikaye") {
+        setScrollProgress(progress);
+      }
       setShowScrollTop(scrollTop > 300);
 
       // Find active section
@@ -79,83 +116,167 @@ const Hikaye = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+      {/* Floating Particles */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-[1]">
+        {particles.map((particle) => (
+          <motion.div
+            key={particle.id}
+            className="absolute rounded-full bg-primary/20"
+            style={{
+              width: particle.size,
+              height: particle.size,
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+            }}
+            animate={{
+              y: [0, -80, 0],
+              x: [0, Math.random() * 40 - 20, 0],
+              opacity: [0, 0.5, 0],
+              scale: [0.5, 1, 0.5],
+            }}
+            transition={{
+              duration: particle.duration,
+              delay: particle.delay,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+
       {/* Hero gradient background */}
-      <div className="fixed inset-0 hero-gradient pointer-events-none" />
+      <div className="fixed inset-0 hero-gradient pointer-events-none z-[0]" />
+      
+      {/* Animated light rays */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-[1]">
+        <motion.div 
+          className="absolute top-0 left-1/4 w-[1px] h-full bg-gradient-to-b from-primary/10 via-primary/5 to-transparent"
+          animate={{ opacity: [0.2, 0.4, 0.2], x: [0, 30, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute top-0 right-1/3 w-[1px] h-full bg-gradient-to-b from-primary/10 via-primary/5 to-transparent"
+          animate={{ opacity: [0.15, 0.35, 0.15], x: [0, -20, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+        />
+      </div>
       
       <Header />
       
       {/* Progress Bar */}
       {activeTab === "hikaye" && (
-        <div className="fixed top-0 left-0 right-0 h-0.5 bg-secondary z-50">
+        <motion.div 
+          className="fixed top-0 left-0 right-0 h-[2px] bg-secondary/50 z-50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
           <motion.div
-            className="h-full bg-primary"
+            className="h-full bg-gradient-to-r from-primary via-primary to-primary/70"
             style={{ width: `${scrollProgress}%` }}
             transition={{ duration: 0.1 }}
           />
-        </div>
+        </motion.div>
       )}
 
       {/* Scroll to Top Button */}
       <AnimatePresence>
-        {activeTab === "hikaye" && showScrollTop && (
+        {showScrollTop && (
           <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
             onClick={scrollToTop}
-            className="fixed bottom-8 right-8 z-50 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg box-glow hover:scale-110 transition-transform"
+            className="fixed bottom-8 right-8 z-50 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform group"
+            whileHover={{ boxShadow: "0 0 30px hsl(var(--primary) / 0.6)" }}
           >
-            <ChevronUp className="w-5 h-5" />
+            <ChevronUp className="w-5 h-5 group-hover:animate-bounce" />
           </motion.button>
         )}
       </AnimatePresence>
 
-      <main className="flex-1 pt-32 pb-20 relative z-10">
-        <div className="container mx-auto px-4">
+      <main className="flex-1 pt-32 pb-24 relative z-10">
+        <motion.div 
+          className="container mx-auto px-4 md:px-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Page Title */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
-          >
-            <span className="text-primary text-sm tracking-[0.3em] uppercase mb-4 block">
-              Keşfet
-            </span>
-            <h1 className="text-5xl md:text-7xl font-display text-foreground mb-4 tracking-wide">
-              HİKAYE & EVREN
+          <motion.div variants={itemVariants} className="text-center mb-14">
+            <motion.div 
+              className="inline-flex items-center gap-2 mb-4"
+              animate={{ 
+                opacity: [0.7, 1, 0.7],
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-primary text-xs tracking-[0.4em] uppercase font-medium">
+                Keşfet
+              </span>
+              <Sparkles className="w-4 h-4 text-primary" />
+            </motion.div>
+            
+            <h1 className="font-display text-6xl md:text-8xl lg:text-[120px] text-foreground leading-[0.9] tracking-tight italic uppercase">
+              <motion.span 
+                className="text-primary inline-block"
+                animate={{
+                  textShadow: [
+                    "0 0 20px hsl(var(--primary) / 0.4)",
+                    "0 0 40px hsl(var(--primary) / 0.7)",
+                    "0 0 20px hsl(var(--primary) / 0.4)",
+                  ],
+                }}
+                transition={{ duration: 2.5, repeat: Infinity }}
+              >
+                HİKAYE
+              </motion.span>
+              <span className="text-foreground/30 mx-2">&</span>
+              <span className="text-foreground">EVREN</span>
             </h1>
-            <div className="w-24 h-0.5 bg-primary mx-auto mb-6" />
-            <p className="text-muted-foreground max-w-md mx-auto text-sm">
+            
+            <motion.div 
+              className="w-32 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mt-6 mb-5"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+            />
+            
+            <p className="text-muted-foreground max-w-md mx-auto text-sm italic">
               Sunucumuzun derin hikayesini ve evrenini keşfedin
             </p>
           </motion.div>
 
           {/* Tab Buttons */}
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex justify-center items-center gap-4 mb-12"
+            variants={itemVariants}
+            className="flex justify-center items-center gap-3 md:gap-4 mb-14"
           >
             {/* Whimsical Info */}
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {activeTab === "whimsical" && (
                 <motion.div
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ duration: 0.2 }}
+                  initial={{ opacity: 0, scale: 0.8, x: 10 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, x: 10 }}
+                  transition={{ duration: 0.25 }}
                 >
-                  <HoverCard openDelay={0} closeDelay={100}>
+                  <HoverCard openDelay={0} closeDelay={150}>
                     <HoverCardTrigger asChild>
-                      <button className="w-8 h-8 rounded-full border border-border bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all duration-300">
+                      <motion.button 
+                        className="w-9 h-9 rounded-full border border-border/60 bg-[#1a1a1a] flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all duration-300"
+                        whileHover={{ scale: 1.1, boxShadow: "0 0 15px hsl(var(--primary) / 0.3)" }}
+                        whileTap={{ scale: 0.95 }}
+                      >
                         <Info className="w-3.5 h-3.5" />
-                      </button>
+                      </motion.button>
                     </HoverCardTrigger>
-                    <HoverCardContent side="bottom" className="w-64 bg-card border border-border p-3">
-                      <p className="text-xs text-foreground">
+                    <HoverCardContent 
+                      side="bottom" 
+                      className="w-72 bg-[#1a1a1a] border border-border/60 p-4 shadow-xl"
+                    >
+                      <p className="text-xs text-foreground/80 leading-relaxed">
                         Whimsical bilgi metni buraya gelecek.
                       </p>
                     </HoverCardContent>
@@ -167,52 +288,87 @@ const Hikaye = () => {
             {/* Whimsical Button */}
             <motion.button
               onClick={() => setActiveTab("whimsical")}
-              className={`relative flex items-center gap-2 px-6 py-2.5 font-display text-sm tracking-wider transition-all duration-300 ${
+              className={`relative flex items-center gap-2.5 px-5 md:px-7 py-3 font-display text-sm tracking-wider transition-all duration-300 rounded-sm overflow-hidden group ${
                 activeTab === "whimsical"
-                  ? "bg-primary text-primary-foreground box-glow"
-                  : "bg-secondary text-muted-foreground hover:text-foreground border border-border"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-[#1a1a1a] text-muted-foreground hover:text-foreground border border-border/40 hover:border-border"
               }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
-              <Map className="w-4 h-4" />
-              WHIMSICAL
+              {activeTab === "whimsical" && (
+                <>
+                  <motion.div 
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent"
+                    animate={{ x: ["-100%", "200%"] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  />
+                  <motion.div
+                    className="absolute inset-0 rounded-sm"
+                    animate={{ boxShadow: ["0 0 20px hsl(var(--primary) / 0.4)", "0 0 35px hsl(var(--primary) / 0.6)", "0 0 20px hsl(var(--primary) / 0.4)"] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                </>
+              )}
+              <Map className="w-4 h-4 relative z-10" />
+              <span className="relative z-10">WHIMSICAL</span>
             </motion.button>
 
-            <div className="w-px h-6 bg-border" />
+            <div className="w-px h-7 bg-border/40" />
 
             {/* Hikaye Button */}
             <motion.button
               onClick={() => setActiveTab("hikaye")}
-              className={`relative flex items-center gap-2 px-6 py-2.5 font-display text-sm tracking-wider transition-all duration-300 ${
+              className={`relative flex items-center gap-2.5 px-5 md:px-7 py-3 font-display text-sm tracking-wider transition-all duration-300 rounded-sm overflow-hidden group ${
                 activeTab === "hikaye"
-                  ? "bg-primary text-primary-foreground box-glow"
-                  : "bg-secondary text-muted-foreground hover:text-foreground border border-border"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-[#1a1a1a] text-muted-foreground hover:text-foreground border border-border/40 hover:border-border"
               }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
-              <BookOpen className="w-4 h-4" />
-              HİKAYE
+              {activeTab === "hikaye" && (
+                <>
+                  <motion.div 
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent"
+                    animate={{ x: ["-100%", "200%"] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  />
+                  <motion.div
+                    className="absolute inset-0 rounded-sm"
+                    animate={{ boxShadow: ["0 0 20px hsl(var(--primary) / 0.4)", "0 0 35px hsl(var(--primary) / 0.6)", "0 0 20px hsl(var(--primary) / 0.4)"] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                </>
+              )}
+              <BookOpen className="w-4 h-4 relative z-10" />
+              <span className="relative z-10">HİKAYE</span>
             </motion.button>
 
             {/* Hikaye Info */}
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {activeTab === "hikaye" && (
                 <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.2 }}
+                  initial={{ opacity: 0, scale: 0.8, x: -10 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, x: -10 }}
+                  transition={{ duration: 0.25 }}
                 >
-                  <HoverCard openDelay={0} closeDelay={100}>
+                  <HoverCard openDelay={0} closeDelay={150}>
                     <HoverCardTrigger asChild>
-                      <button className="w-8 h-8 rounded-full border border-border bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all duration-300">
+                      <motion.button 
+                        className="w-9 h-9 rounded-full border border-border/60 bg-[#1a1a1a] flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all duration-300"
+                        whileHover={{ scale: 1.1, boxShadow: "0 0 15px hsl(var(--primary) / 0.3)" }}
+                        whileTap={{ scale: 0.95 }}
+                      >
                         <Info className="w-3.5 h-3.5" />
-                      </button>
+                      </motion.button>
                     </HoverCardTrigger>
-                    <HoverCardContent side="bottom" className="w-64 bg-card border border-border p-3">
-                      <p className="text-xs text-foreground">
+                    <HoverCardContent 
+                      side="bottom" 
+                      className="w-72 bg-[#1a1a1a] border border-border/60 p-4 shadow-xl"
+                    >
+                      <p className="text-xs text-foreground/80 leading-relaxed">
                         Hikaye bilgi metni buraya gelecek.
                       </p>
                     </HoverCardContent>
@@ -227,15 +383,39 @@ const Hikaye = () => {
             {activeTab === "whimsical" && (
               <motion.div
                 key="whimsical"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
-                className="w-full aspect-video card-gradient rounded-sm flex items-center justify-center border border-border"
+                transition={{ duration: 0.5 }}
+                className="w-full aspect-video relative bg-[#1a1a1a] rounded-lg flex items-center justify-center border border-border/30 overflow-hidden group"
               >
-                <div className="text-center">
-                  <Map className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                  <p className="text-muted-foreground text-sm">
+                {/* Gradient overlay */}
+                <div 
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: "linear-gradient(135deg, transparent 0%, transparent 40%, hsl(var(--primary) / 0.05) 70%, hsl(var(--primary) / 0.12) 100%)",
+                  }}
+                />
+                
+                {/* Hover glow */}
+                <motion.div 
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{
+                    background: "radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.1) 0%, transparent 60%)",
+                  }}
+                />
+                
+                <div className="text-center relative z-10">
+                  <motion.div
+                    animate={{ 
+                      opacity: [0.3, 0.5, 0.3],
+                      scale: [1, 1.05, 1],
+                    }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  >
+                    <Map className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+                  </motion.div>
+                  <p className="text-muted-foreground/60 text-sm">
                     Whimsical embed linki buraya eklenecek
                   </p>
                 </div>
@@ -245,65 +425,102 @@ const Hikaye = () => {
             {activeTab === "hikaye" && (
               <motion.div
                 key="hikaye"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
-                className="flex justify-center gap-8"
+                transition={{ duration: 0.5 }}
+                className="flex justify-center gap-10"
               >
                 {/* İçindekiler - Sticky Sol Taraf */}
-                <aside className="hidden lg:block w-48 shrink-0">
+                <aside className="hidden lg:block w-52 shrink-0">
                   <div className="sticky top-32">
-                    <h3 className="text-xs text-primary tracking-[0.2em] uppercase mb-4">
-                      İÇİNDEKİLER
-                    </h3>
-                    <nav className="space-y-1">
-                      {storyContent.map((section, index) => (
-                        <motion.button
-                          key={section.id}
-                          onClick={() => scrollToSection(section.id)}
-                          className={`block w-full text-left px-3 py-2 text-xs tracking-wide transition-all duration-300 border-l-2 ${
-                            activeSection === section.id
-                              ? "border-primary text-primary bg-primary/5"
-                              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                          }`}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          {section.title}
-                        </motion.button>
-                      ))}
-                    </nav>
+                    <div className="bg-[#1a1a1a] border border-border/30 rounded-lg p-5">
+                      <h3 className="text-[10px] text-primary tracking-[0.25em] uppercase mb-5 font-medium flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        İÇİNDEKİLER
+                      </h3>
+                      <nav className="space-y-1">
+                        {storyContent.map((section, index) => (
+                          <motion.button
+                            key={section.id}
+                            onClick={() => scrollToSection(section.id)}
+                            className={`block w-full text-left px-3 py-2.5 text-[11px] tracking-wide transition-all duration-300 rounded-md border-l-2 ${
+                              activeSection === section.id
+                                ? "border-primary text-primary bg-primary/10"
+                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+                            }`}
+                            initial={{ opacity: 0, x: -15 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3 + index * 0.08 }}
+                            whileHover={{ x: 4 }}
+                          >
+                            {section.title}
+                          </motion.button>
+                        ))}
+                      </nav>
+                    </div>
                   </div>
                 </aside>
 
-                {/* Story Content - Glass Effect, No Height Limit */}
-                <div className="w-full max-w-5xl">
-                  <div className="bg-background/30 backdrop-blur-lg border border-border/40 rounded-sm p-10 md:p-14 shadow-2xl">
+                {/* Story Content - Glass Effect */}
+                <div className="w-full max-w-4xl">
+                  <motion.div 
+                    className="relative bg-[#0d0d0d]/60 backdrop-blur-xl border border-border/20 rounded-lg p-8 md:p-12 lg:p-16 overflow-hidden"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    {/* Corner decorations */}
+                    <div className="absolute top-0 left-0 w-16 h-16 border-l-2 border-t-2 border-primary/20 rounded-tl-lg" />
+                    <div className="absolute bottom-0 right-0 w-16 h-16 border-r-2 border-b-2 border-primary/20 rounded-br-lg" />
+                    
+                    {/* Gradient overlay */}
+                    <div 
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background: "linear-gradient(180deg, hsl(var(--primary) / 0.02) 0%, transparent 30%, transparent 70%, hsl(var(--primary) / 0.02) 100%)",
+                      }}
+                    />
+
                     {storyContent.map((section, index) => (
                       <motion.section
                         key={section.id}
                         data-section={section.id}
-                        className={`mb-16 ${index !== 0 ? "pt-12 border-t border-border/20" : ""}`}
-                        initial={{ opacity: 0, y: 15 }}
+                        className={`relative mb-20 last:mb-0 ${index !== 0 ? "pt-16" : ""}`}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
+                        transition={{ delay: 0.4 + index * 0.12 }}
                       >
-                        <h2 className="text-2xl md:text-3xl font-display text-foreground mb-6 tracking-wide">
+                        {index !== 0 && (
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                        )}
+                        
+                        <div className="flex items-center gap-4 mb-6">
+                          <motion.span 
+                            className="text-[10px] text-primary/60 tracking-[0.3em] uppercase"
+                            animate={{ opacity: [0.5, 0.8, 0.5] }}
+                            transition={{ duration: 3, repeat: Infinity, delay: index * 0.5 }}
+                          >
+                            {String(index + 1).padStart(2, '0')}
+                          </motion.span>
+                          <div className="w-8 h-px bg-primary/30" />
+                        </div>
+                        
+                        <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-foreground mb-8 tracking-wide italic">
                           {section.title}
                         </h2>
-                        <p className="text-muted-foreground leading-relaxed text-sm">
+                        
+                        <p className="text-muted-foreground leading-[1.9] text-sm md:text-base max-w-2xl">
                           {section.content}
                         </p>
                       </motion.section>
                     ))}
-                  </div>
+                  </motion.div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </main>
 
       <Footer />
