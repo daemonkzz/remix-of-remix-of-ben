@@ -22,21 +22,46 @@ interface UseWhiteboardSyncOptions {
 
 /**
  * Deep clones scene data to avoid Excalidraw readonly proxy issues
+ * CRITICAL: Filters out isDeleted elements to prevent invisible elements bug
  */
 export function cloneSceneData(
   elements: readonly any[],
   appState: AppState,
   files: BinaryFiles
 ): SceneData {
+  // CRITICAL FIX: Filter out deleted elements before saving
+  const visibleElements = elements.filter(el => !el.isDeleted);
+  
+  // Only keep files that are referenced by visible image elements
+  const referencedFileIds = new Set(
+    visibleElements
+      .filter(el => el.type === 'image' && el.fileId)
+      .map(el => el.fileId)
+  );
+  
+  const cleanedFiles: BinaryFiles = {};
+  for (const [fileId, fileData] of Object.entries(files)) {
+    if (referencedFileIds.has(fileId)) {
+      cleanedFiles[fileId] = fileData;
+    }
+  }
+  
+  console.log('[cloneSceneData] Filtering:', {
+    originalElements: elements.length,
+    visibleElements: visibleElements.length,
+    originalFiles: Object.keys(files).length,
+    cleanedFiles: Object.keys(cleanedFiles).length,
+  });
+  
   return {
-    elements: JSON.parse(JSON.stringify(elements)),
+    elements: JSON.parse(JSON.stringify(visibleElements)),
     appState: {
       viewBackgroundColor: appState.viewBackgroundColor,
       zoom: appState.zoom,
       scrollX: appState.scrollX,
       scrollY: appState.scrollY,
     },
-    files: JSON.parse(JSON.stringify(files)),
+    files: JSON.parse(JSON.stringify(cleanedFiles)),
   };
 }
 

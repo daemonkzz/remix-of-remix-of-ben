@@ -36,35 +36,47 @@ const normalizeFiles = (files: BinaryFiles | undefined): BinaryFiles => {
 
 const DEFAULT_VIEW_BG = '#ffffff';
 
+/**
+ * Normalize elements - fixes image status and filters deleted elements
+ * CRITICAL: Filters out isDeleted elements to prevent invisible elements bug
+ */
 const normalizeElements = (elements: any[], files: BinaryFiles): any[] => {
   if (!Array.isArray(elements)) return [];
 
-  return elements.map((el) => {
-    if (!el || typeof el !== 'object') return el;
+  return elements
+    // CRITICAL FIX: First filter out deleted elements
+    .filter(el => el && typeof el === 'object' && !el.isDeleted)
+    .map((el) => {
+      if (el.type === 'image') {
+        const fileId = (el as any).fileId;
+        const hasFile = !!fileId && !!(files as any)[fileId];
 
-    if (el.type === 'image') {
-      const fileId = (el as any).fileId;
-      const hasFile = !!fileId && !!(files as any)[fileId];
+        // Excalidraw sometimes persists image elements as "pending" even though
+        // file data exists. Force to "saved" so it can render in view mode.
+        if ((el as any).status === 'pending') {
+          return { ...el, status: hasFile ? 'saved' : 'error' };
+        }
 
-      // Excalidraw sometimes persists image elements as "pending" even though
-      // file data exists. Force to "saved" so it can render in view mode.
-      if ((el as any).status === 'pending') {
-        return { ...el, status: hasFile ? 'saved' : 'error' };
+        // If we don't have the file payload, mark as error to avoid bounds issues.
+        if (!hasFile && ((el as any).status === 'saved' || (el as any).status == null)) {
+          return { ...el, status: 'error' };
+        }
       }
 
-      // If we don't have the file payload, mark as error to avoid bounds issues.
-      if (!hasFile && ((el as any).status === 'saved' || (el as any).status == null)) {
-        return { ...el, status: 'error' };
-      }
-    }
-
-    return el;
-  });
+      return el;
+    });
 };
 
+/**
+ * Get renderable elements - filters out deleted elements and broken images
+ * CRITICAL: This ensures we never try to render or scroll to deleted elements
+ */
 const getRenderableElements = (elements: any[], files: BinaryFiles) => {
   return (elements || []).filter((el) => {
     if (!el || typeof el !== 'object') return false;
+    
+    // CRITICAL FIX: Always exclude deleted elements
+    if (el.isDeleted) return false;
 
     if (el.type === 'image') {
       const fileId = (el as any).fileId;
