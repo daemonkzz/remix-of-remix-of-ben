@@ -73,8 +73,8 @@ const getRenderableElements = (elements: any[], files: BinaryFiles) => {
   });
 };
 
-// Dark background color matching the site theme
-const DARK_BACKGROUND_COLOR = '#0a0a0f';
+// Transparent background to integrate with site theme
+const TRANSPARENT_BACKGROUND = 'transparent';
 
 interface UseWhiteboardViewerOptions {
   whiteboardName?: string;
@@ -127,7 +127,7 @@ export function useWhiteboardViewer(
       const canvas = await exportToCanvas({
         elements: renderableElements,
         appState: {
-          viewBackgroundColor: DARK_BACKGROUND_COLOR,
+          viewBackgroundColor: TRANSPARENT_BACKGROUND,
           exportWithDarkMode: true,
         },
         files,
