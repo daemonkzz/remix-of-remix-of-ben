@@ -1,8 +1,11 @@
 import { motion } from "framer-motion";
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import portalSilhouette from "@/assets/portal-silhouette.png";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { useMemo } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import LoginModal from "@/components/LoginModal";
 
 // Generate portal particles
 const generatePortalParticles = (count: number) => {
@@ -19,6 +22,17 @@ const generatePortalParticles = (count: number) => {
 const CTASection = () => {
   const { ref: sectionRef, isVisible } = useScrollReveal({ threshold: 0.2 });
   const particles = useMemo(() => generatePortalParticles(24), []);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+
+  const handleApplyClick = () => {
+    if (user) {
+      navigate('/basvuru');
+    } else {
+      setIsLoginOpen(true);
+    }
+  };
 
   return (
     <section className="py-10 md:py-24 lg:py-28 relative overflow-hidden">
@@ -137,6 +151,7 @@ const CTASection = () => {
                 variant="glow" 
                 size="lg" 
                 className="px-12 py-6 text-sm font-medium rounded-sm relative overflow-hidden group"
+                onClick={handleApplyClick}
               >
                 {/* Button shimmer effect */}
                 <motion.div
@@ -172,6 +187,8 @@ const CTASection = () => {
           </motion.div>
         </div>
       </motion.div>
+      
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </section>
   );
 };

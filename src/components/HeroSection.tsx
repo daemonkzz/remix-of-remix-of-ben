@@ -1,8 +1,11 @@
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import LoginModal from "@/components/LoginModal";
 
 // Generate floating particles
 const generateFloatingParticles = (count: number) => {
@@ -20,6 +23,17 @@ const generateFloatingParticles = (count: number) => {
 const HeroSection = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const particles = useMemo(() => generateFloatingParticles(30), []);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+
+  const handleApplyClick = () => {
+    if (user) {
+      navigate('/basvuru');
+    } else {
+      setIsLoginOpen(true);
+    }
+  };
   const {
     scrollYProgress
   } = useScroll({
@@ -160,7 +174,7 @@ const HeroSection = () => {
               transition={{ duration: 0.8, delay: 1.5 }}
             >
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="glow" size="lg" className="text-sm px-8 font-medium">
+                <Button variant="glow" size="lg" className="text-sm px-8 font-medium" onClick={handleApplyClick}>
                   Başvur <span className="ml-1.5">↗</span>
                 </Button>
               </motion.div>
@@ -289,7 +303,7 @@ const HeroSection = () => {
             transition={{ duration: 0.8, delay: 1.5 }}
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="glow" size="lg" className="text-base px-8 py-3 font-medium">
+              <Button variant="glow" size="lg" className="text-base px-8 py-3 font-medium" onClick={handleApplyClick}>
                 Başvur <span className="ml-1.5">↗</span>
               </Button>
             </motion.div>
@@ -327,6 +341,8 @@ const HeroSection = () => {
 
       {/* Bottom gradient overlay */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+      
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </section>;
 };
 export default HeroSection;
