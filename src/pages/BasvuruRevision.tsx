@@ -36,6 +36,30 @@ interface Application {
   content_history: Array<{ timestamp: string; content: Record<string, string> }>;
 }
 
+const normalizeStringArray = (value: unknown): string[] | null => {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string");
+  if (typeof value === "string") return [value];
+  return null;
+};
+
+const normalizeStringRecord = (value: unknown): Record<string, string> | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entries = Object.entries(value as Record<string, unknown>).filter(([, v]) => typeof v === "string");
+  return Object.fromEntries(entries) as Record<string, string>;
+};
+
+const normalizeContent = (value: unknown): Record<string, string> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof v === "string") out[k] = v;
+    else if (Array.isArray(v)) out[k] = v.filter((x): x is string => typeof x === "string").join(", ");
+    else if (v == null) out[k] = "";
+    else out[k] = String(v);
+  }
+  return out;
+};
+
 // Floating particles generator
 const generateFloatingParticles = (count: number) => {
   return Array.from({ length: count }, (_, i) => ({
@@ -111,10 +135,10 @@ const BasvuruRevision = () => {
         } else if (appData) {
           const app: Application = {
             ...appData,
-            content: appData.content as Record<string, string>,
-            revision_requested_fields: appData.revision_requested_fields as string[] | null,
-            revision_notes: appData.revision_notes as Record<string, string> | null,
-            content_history: (appData.content_history || []) as Array<{ timestamp: string; content: Record<string, string> }>
+            content: normalizeContent(appData.content),
+            revision_requested_fields: normalizeStringArray(appData.revision_requested_fields),
+            revision_notes: normalizeStringRecord(appData.revision_notes),
+            content_history: (Array.isArray(appData.content_history) ? appData.content_history : []) as Array<{ timestamp: string; content: Record<string, string> }>
           };
           setApplication(app);
 
@@ -158,13 +182,14 @@ const BasvuruRevision = () => {
   };
 
   const isFieldRevisionRequested = (questionLabel: string): boolean => {
-    if (!application?.revision_requested_fields) return false;
-    return application.revision_requested_fields.includes(questionLabel);
+    const fields = application?.revision_requested_fields;
+    return Array.isArray(fields) && fields.includes(questionLabel);
   };
 
   const getRevisionNote = (questionLabel: string): string | null => {
-    if (!application?.revision_notes) return null;
-    return application.revision_notes[questionLabel] || null;
+    const notes = application?.revision_notes;
+    if (!notes) return null;
+    return notes[questionLabel] || null;
   };
 
   const handleSubmit = async () => {
@@ -331,7 +356,9 @@ const BasvuruRevision = () => {
         {question.type === 'checkbox' && question.options && (
           <div className="space-y-2">
             {question.options.map((option, optionIndex) => {
-              const currentValue = typeof value === 'string' ? value.split(', ') : (value as string[]) || [];
+              const currentValue = typeof value === 'string'
+                ? value.split(', ').filter(v => v)
+                : Array.isArray(value) ? value : [];
               const isChecked = currentValue.includes(option);
               return (
                 <div

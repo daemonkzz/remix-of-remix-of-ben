@@ -54,6 +54,18 @@ interface UserApplication {
   revision_notes: Record<string, string> | null;
 }
 
+const normalizeStringArray = (value: unknown): string[] | null => {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string");
+  if (typeof value === "string") return [value];
+  return null;
+};
+
+const normalizeStringRecord = (value: unknown): Record<string, string> | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entries = Object.entries(value as Record<string, unknown>).filter(([, v]) => typeof v === "string");
+  return Object.fromEntries(entries) as Record<string, string>;
+};
+
 // Floating particles generator
 const generateFloatingParticles = (count: number) => {
   return Array.from({ length: count }, (_, i) => ({
@@ -322,10 +334,11 @@ const Basvuru = () => {
         if (appError) {
           console.error('Applications fetch error:', appError);
         } else {
-          const typedApplications: UserApplication[] = (applications || []).map(app => ({
+          const typedApplications: UserApplication[] = (applications || []).map((app) => ({
             ...app,
-            revision_requested_fields: app.revision_requested_fields as string[] | null,
-            revision_notes: app.revision_notes as Record<string, string> | null
+            status: typeof app.status === "string" ? app.status : String(app.status ?? ""),
+            revision_requested_fields: normalizeStringArray(app.revision_requested_fields),
+            revision_notes: normalizeStringRecord(app.revision_notes),
           }));
           setUserApplications(typedApplications);
         }
@@ -618,6 +631,9 @@ const Basvuru = () => {
                         {whitelistForms.map((template, index) => {
                           const appStatus = getApplicationStatus(template.id, template);
                           const revisionApp = userApplications.find(a => a.type === template.id && a.status === 'revision_requested');
+                          const revisionCount = Array.isArray(revisionApp?.revision_requested_fields)
+                            ? revisionApp?.revision_requested_fields.length
+                            : undefined;
                           return (
                             <ApplicationCard
                               key={template.id}
@@ -630,7 +646,7 @@ const Basvuru = () => {
                               coverImage={template.cover_image_url}
                               rejectionReason={userApplications.find(a => a.type === template.id && a.status === 'rejected')?.admin_note}
                               onReapply={appStatus === 'rejected' ? () => navigate(`/basvuru/${template.id}`) : undefined}
-                              revisionCount={revisionApp?.revision_requested_fields?.length}
+                              revisionCount={revisionCount}
                               onRevisionEdit={appStatus === 'revision_requested' ? () => navigate(`/basvuru/${template.id}/revision`) : undefined}
                             />
                           );
@@ -647,6 +663,9 @@ const Basvuru = () => {
                         {otherForms.map((template, index) => {
                           const appStatus = getApplicationStatus(template.id, template);
                           const revisionApp = userApplications.find(a => a.type === template.id && a.status === 'revision_requested');
+                          const revisionCount = Array.isArray(revisionApp?.revision_requested_fields)
+                            ? revisionApp?.revision_requested_fields.length
+                            : undefined;
                           return (
                             <ApplicationCard
                               key={template.id}
@@ -659,7 +678,7 @@ const Basvuru = () => {
                               coverImage={template.cover_image_url}
                               rejectionReason={userApplications.find(a => a.type === template.id && a.status === 'rejected')?.admin_note}
                               onReapply={appStatus === 'rejected' ? () => navigate(`/basvuru/${template.id}`) : undefined}
-                              revisionCount={revisionApp?.revision_requested_fields?.length}
+                              revisionCount={revisionCount}
                               onRevisionEdit={appStatus === 'revision_requested' ? () => navigate(`/basvuru/${template.id}/revision`) : undefined}
                             />
                           );
