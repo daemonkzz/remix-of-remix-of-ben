@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Excalidraw, convertToExcalidrawElements } from '@excalidraw/excalidraw';
+import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -347,23 +348,25 @@ export default function WhiteboardEditor() {
         </div>
 
         {/* Excalidraw Editor */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative" style={{ height: 'calc(100vh - 80px)' }}>
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-background">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : (
-            <Excalidraw
-              excalidrawAPI={(api) => setExcalidrawAPI(api)}
-              initialData={initialData ? {
-                elements: initialData.elements,
-                appState: initialData.appState,
-                files: initialData.files,
-              } : undefined}
-              onChange={handleChange}
-              theme="dark"
-              langCode="tr-TR"
-            />
+            <div style={{ width: '100%', height: '100%' }}>
+              <Excalidraw
+                excalidrawAPI={(api) => setExcalidrawAPI(api)}
+                initialData={initialData ? {
+                  elements: initialData.elements,
+                  appState: initialData.appState,
+                  files: initialData.files,
+                } : undefined}
+                onChange={handleChange}
+                theme="dark"
+                langCode="tr-TR"
+              />
+            </div>
           )}
         </div>
 

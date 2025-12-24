@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Excalidraw } from '@excalidraw/excalidraw';
+import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
@@ -124,7 +125,7 @@ export default function LiveMap() {
       </header>
 
       {/* Map Area */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative" style={{ height: 'calc(100vh - 64px)' }}>
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-4">
@@ -133,34 +134,36 @@ export default function LiveMap() {
             </div>
           </div>
         ) : (
-          <Excalidraw
-            excalidrawAPI={(api) => setExcalidrawAPI(api)}
-            initialData={initialData ? {
-              elements: initialData.elements,
-              appState: {
-                ...initialData.appState,
-                viewModeEnabled: true,
-              },
-              files: initialData.files,
-            } : {
-              appState: {
-                viewModeEnabled: true,
-              }
-            }}
-            viewModeEnabled={true}
-            zenModeEnabled={true}
-            theme="dark"
-            langCode="tr-TR"
-            UIOptions={{
-              canvasActions: {
-                export: false,
-                saveAsImage: false,
-                loadScene: false,
-                clearCanvas: false,
-                toggleTheme: false,
-              },
-            }}
-          />
+          <div style={{ width: '100%', height: '100%' }}>
+            <Excalidraw
+              excalidrawAPI={(api) => setExcalidrawAPI(api)}
+              initialData={initialData ? {
+                elements: initialData.elements,
+                appState: {
+                  ...initialData.appState,
+                  viewModeEnabled: true,
+                },
+                files: initialData.files,
+              } : {
+                appState: {
+                  viewModeEnabled: true,
+                }
+              }}
+              viewModeEnabled={true}
+              zenModeEnabled={true}
+              theme="dark"
+              langCode="tr-TR"
+              UIOptions={{
+                canvasActions: {
+                  export: false,
+                  saveAsImage: false,
+                  loadScene: false,
+                  clearCanvas: false,
+                  toggleTheme: false,
+                },
+              }}
+            />
+          </div>
         )}
       </div>
     </div>
