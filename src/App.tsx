@@ -23,7 +23,9 @@ import RulesEditor from "./pages/admin/RulesEditor";
 import Gallery from "./pages/admin/Gallery";
 import ManageAccess from "./pages/admin/ManageAccess";
 import NotificationEditor from "./pages/admin/NotificationEditor";
+import WhiteboardEditor from "./pages/admin/WhiteboardEditor";
 import Locked from "./pages/admin/Locked";
+import LiveMap from "./pages/LiveMap";
 import NotFound from "./pages/NotFound";
 import AmbientParticles from "./components/AmbientParticles";
 
@@ -47,6 +49,7 @@ const App = () => (
               <Route path="/basvuru" element={<Basvuru />} />
               <Route path="/basvuru/:formId" element={<BasvuruForm />} />
               <Route path="/basvuru/:formId/revision" element={<BasvuruRevision />} />
+              <Route path="/canli-harita" element={<LiveMap />} />
 
               {/* Admin Routes - Protected with 2FA */}
               <Route
@@ -65,6 +68,7 @@ const App = () => (
                         <Route path="gallery" element={<Gallery />} />
                         <Route path="manage-access" element={<ManageAccess />} />
                         <Route path="notification-editor" element={<NotificationEditor />} />
+                        <Route path="whiteboard-editor" element={<WhiteboardEditor />} />
                         <Route path="locked" element={<Locked />} />
                       </Routes>
                     </AdminRouteGuard>

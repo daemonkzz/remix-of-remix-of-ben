@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Shield, FileText, Settings, Bell, Users, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Shield, FileText, Settings, Bell, Users, ShieldCheck, Image as ImageIcon, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SessionTimeoutIndicator } from '@/components/admin/SessionTimeoutIndicator';
 
-type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'bildirimler' | 'kurallar' | 'galeri' | 'kullanicilar' | 'yetkilendirme';
+type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'bildirimler' | 'kurallar' | 'galeri' | 'canliharita' | 'kullanicilar' | 'yetkilendirme';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -21,6 +21,7 @@ const sidebarItems = [
   { id: 'bildirimler' as TabType, label: 'Bildirimler', icon: Bell, path: '/admin/notification-editor' },
   { id: 'kurallar' as TabType, label: 'Kurallar', icon: Shield, path: '/admin/rules-editor' },
   { id: 'galeri' as TabType, label: 'Medya Galeri', icon: ImageIcon, path: '/admin/gallery' },
+  { id: 'canliharita' as TabType, label: 'Canlı Harita', icon: Map, path: '/admin/whiteboard-editor' },
   { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users, path: '/admin?tab=kullanicilar' },
   { id: 'yetkilendirme' as TabType, label: 'Yetki Yönetimi', icon: ShieldCheck, path: '/admin/manage-access' },
 ];
@@ -29,6 +30,7 @@ const sidebarItems = [
 const getActiveTabFromPath = (pathname: string, search: string): TabType => {
   if (pathname === '/admin/rules-editor') return 'kurallar';
   if (pathname === '/admin/gallery') return 'galeri';
+  if (pathname === '/admin/whiteboard-editor') return 'canliharita';
   if (pathname === '/admin/manage-access') return 'yetkilendirme';
   if (pathname === '/admin/notification-editor') return 'bildirimler';
   
