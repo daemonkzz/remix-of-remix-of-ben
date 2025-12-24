@@ -11,6 +11,50 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Form configurations for different application types
 const formConfigs: Record<string, { title: string; steps: FormStep[] }> = {
+  "whitelist": {
+    title: "Whitelist Başvurusu",
+    steps: [
+      {
+        id: "personal",
+        title: "Kişisel Bilgiler",
+        description: "Kendiniz hakkında bilgi verin",
+        fields: [
+          { id: "discordName", type: "text", label: "Discord Kullanıcı Adınız", placeholder: "Örn: username#1234", required: true },
+          { id: "age", type: "text", label: "Gerçek Yaşınız", placeholder: "Örn: 18", required: true },
+          { id: "howDidYouFind", type: "select", label: "Sunucuyu Nasıl Buldunuz?", options: ["Discord", "YouTube", "Arkadaş Tavsiyesi", "Sosyal Medya", "Diğer"], required: true },
+        ],
+      },
+      {
+        id: "experience",
+        title: "Roleplay Deneyimi",
+        description: "RP deneyiminiz hakkında bilgi verin",
+        fields: [
+          { id: "rpExperience", type: "textarea", label: "Daha Önce RP Deneyiminiz Var mı?", placeholder: "Hangi sunucularda, ne kadar süre oynadınız?", required: true },
+          { id: "whatIsRp", type: "textarea", label: "Roleplay Nedir? Kısaca Açıklayın", placeholder: "RP kavramını nasıl anlıyorsunuz?", required: true },
+          { id: "rules", type: "textarea", label: "Temel RP Kurallarını Biliyor musunuz?", placeholder: "RDM, VDM, Metagaming gibi kavramları açıklayın...", required: true },
+        ],
+      },
+      {
+        id: "character",
+        title: "Karakter Bilgileri",
+        description: "Oluşturmak istediğiniz karakter",
+        fields: [
+          { id: "characterName", type: "text", label: "Karakter Adı Soyadı", placeholder: "Örn: John Doe", required: true },
+          { id: "characterAge", type: "text", label: "Karakter Yaşı", placeholder: "Örn: 25", required: true },
+          { id: "characterBackstory", type: "textarea", label: "Karakter Hikayesi", placeholder: "Karakterinizin geçmişini, kişiliğini ve hedeflerini anlatın...", required: true },
+        ],
+      },
+      {
+        id: "scenario",
+        title: "Senaryo Sorusu",
+        description: "Aşağıdaki senaryoya nasıl tepki verirsiniz?",
+        fields: [
+          { id: "scenario1", type: "textarea", label: "Senaryo: Karakteriniz şehre yeni gelmiş ve bir iş arıyor. Bir kafede oturuyorken yanınıza biri yaklaşıp size iş teklif ediyor. Ne yaparsınız?", placeholder: "Karakteriniz olarak nasıl tepki verirsiniz? Detaylı anlatın...", required: true },
+          { id: "scenario2", type: "textarea", label: "Senaryo: Arabanızla giderken bir kaza yapıyorsunuz ve karşı araçtaki kişi size bağırmaya başlıyor. Ne yaparsınız?", placeholder: "Karakteriniz olarak nasıl tepki verirsiniz?", required: true },
+        ],
+      },
+    ],
+  },
   "lspd-akademi": {
     title: "LSPD Akademi Başvurusu",
     steps: [
@@ -231,7 +275,7 @@ const BasvuruForm = () => {
     }
 
     // Validate form ID
-    if (!formId || !['lspd-akademi', 'sirket', 'taksici', 'hastane'].includes(formId)) {
+    if (!formId || !['whitelist', 'lspd-akademi', 'sirket', 'taksici', 'hastane'].includes(formId)) {
       toast({
         title: "Hata",
         description: "Geçersiz başvuru türü.",

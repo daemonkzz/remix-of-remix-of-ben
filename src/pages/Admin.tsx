@@ -276,7 +276,11 @@ const Admin = () => {
                   </TableHeader>
                   <TableBody>
                     {applications.map((app) => (
-                      <TableRow key={app.id} className="border-border">
+                      <TableRow 
+                        key={app.id} 
+                        className="border-border cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/admin/basvuru/${app.id}`)}
+                      >
                         <TableCell className="font-medium text-foreground">
                           {getCharacterName(app.content as Record<string, string>)}
                         </TableCell>

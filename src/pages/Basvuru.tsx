@@ -1,12 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
-import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Loader2, Lock, CheckCircle, Clock, XCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Application card types
-type ApplicationStatus = "open" | "closed" | "approved" | "pending" | "draft";
+type ApplicationStatus = "open" | "closed" | "approved" | "pending" | "draft" | "rejected" | "locked";
 
 interface ApplicationCardProps {
   title: string;
@@ -14,13 +17,22 @@ interface ApplicationCardProps {
   formId?: string;
   featured?: boolean;
   delay?: number;
+  applicationId?: number;
 }
 
 interface HistoryItemProps {
+  id: number;
   title: string;
   status: "approved" | "pending" | "draft" | "rejected";
-  applicationNumber?: string;
+  type: string;
   delay?: number;
+}
+
+interface UserApplication {
+  id: number;
+  type: string;
+  status: string;
+  created_at: string;
 }
 
 // Floating particles generator
@@ -35,7 +47,7 @@ const generateFloatingParticles = (count: number) => {
   }));
 };
 
-const ApplicationCard = ({ title, status, formId, featured, delay = 0 }: ApplicationCardProps) => {
+const ApplicationCard = ({ title, status, formId, featured, delay = 0, applicationId }: ApplicationCardProps) => {
   const getStatusContent = () => {
     switch (status) {
       case "open":
@@ -56,16 +68,32 @@ const ApplicationCard = ({ title, status, formId, featured, delay = 0 }: Applica
             Başvurular şu an kapalı
           </div>
         );
+      case "locked":
+        return (
+          <div className="py-3 text-center text-muted-foreground/60 text-sm border border-border/20 rounded-md bg-muted/5 flex items-center justify-center gap-2">
+            <Lock className="w-4 h-4" />
+            Whitelist onayı gerekli
+          </div>
+        );
       case "approved":
         return (
-          <div className="py-3 text-center text-primary text-sm border border-primary/20 rounded-md bg-primary/5">
+          <div className="py-3 text-center text-primary text-sm border border-primary/20 rounded-md bg-primary/5 flex items-center justify-center gap-2">
+            <CheckCircle className="w-4 h-4" />
             Başvurunuz onaylandı
           </div>
         );
       case "pending":
         return (
-          <div className="py-3 text-center text-amber-500 text-sm border border-amber-500/20 rounded-md bg-amber-500/5">
+          <div className="py-3 text-center text-amber-500 text-sm border border-amber-500/20 rounded-md bg-amber-500/5 flex items-center justify-center gap-2">
+            <Clock className="w-4 h-4" />
             Başvurunuz inceleniyor
+          </div>
+        );
+      case "rejected":
+        return (
+          <div className="py-3 text-center text-destructive text-sm border border-destructive/20 rounded-md bg-destructive/5 flex items-center justify-center gap-2">
+            <XCircle className="w-4 h-4" />
+            Başvurunuz reddedildi
           </div>
         );
       case "draft":
@@ -93,7 +121,7 @@ const ApplicationCard = ({ title, status, formId, featured, delay = 0 }: Applica
         featured 
           ? "bg-card/60 border-primary/20 hover:border-primary/40" 
           : "bg-card/30 border-border/20 hover:border-border/40"
-      }`}
+      } ${status === "locked" ? "opacity-60" : ""}`}
     >
       <div className="space-y-4">
         {/* Header */}
@@ -104,6 +132,16 @@ const ApplicationCard = ({ title, status, formId, featured, delay = 0 }: Applica
           {status === "approved" && (
             <span className="text-[10px] text-primary font-medium tracking-widest uppercase">
               Onaylı
+            </span>
+          )}
+          {status === "pending" && (
+            <span className="text-[10px] text-amber-500 font-medium tracking-widest uppercase">
+              Beklemede
+            </span>
+          )}
+          {status === "rejected" && (
+            <span className="text-[10px] text-destructive font-medium tracking-widest uppercase">
+              Reddedildi
             </span>
           )}
           {featured && status === "open" && (
@@ -123,14 +161,15 @@ const ApplicationCard = ({ title, status, formId, featured, delay = 0 }: Applica
   );
 };
 
-const HistoryItem = ({ title, status, applicationNumber, delay = 0 }: HistoryItemProps) => {
+const HistoryItem = ({ id, title, status, type, delay = 0 }: HistoryItemProps) => {
   const statusConfig = {
-    approved: { color: "text-primary", label: "Onaylandı" },
-    pending: { color: "text-amber-500", label: "Beklemede" },
-    draft: { color: "text-muted-foreground", label: "Taslak" },
-    rejected: { color: "text-destructive", label: "Reddedildi" },
+    approved: { color: "text-primary", label: "Onaylandı", icon: CheckCircle },
+    pending: { color: "text-amber-500", label: "Beklemede", icon: Clock },
+    draft: { color: "text-muted-foreground", label: "Taslak", icon: Clock },
+    rejected: { color: "text-destructive", label: "Reddedildi", icon: XCircle },
   };
   const config = statusConfig[status];
+  const Icon = config.icon;
 
   return (
     <motion.div
@@ -145,26 +184,105 @@ const HistoryItem = ({ title, status, applicationNumber, delay = 0 }: HistoryIte
           <h4 className="text-sm text-foreground group-hover:text-primary transition-colors duration-300">
             {title}
           </h4>
-          <span className={`text-xs ${config.color}`}>{config.label}</span>
+          <div className={`text-xs ${config.color} flex items-center gap-1`}>
+            <Icon className="w-3 h-3" />
+            {config.label}
+          </div>
         </div>
-        {applicationNumber && (
-          <span className="text-[10px] text-muted-foreground font-mono">
-            #{applicationNumber}
-          </span>
-        )}
+        <span className="text-[10px] text-muted-foreground font-mono">
+          #{id}
+        </span>
       </div>
-      
-      {status === "draft" && (
-        <button className="mt-3 w-full py-2 text-xs bg-muted/30 hover:bg-muted/50 text-muted-foreground rounded-md border border-border/20 transition-all">
-          Devam Et
-        </button>
-      )}
     </motion.div>
   );
 };
 
+const formTypeNames: Record<string, string> = {
+  'whitelist': 'Whitelist Başvurusu',
+  'lspd-akademi': 'LSPD Akademi Başvurusu',
+  'sirket': 'Şirket Başvurusu',
+  'taksici': 'Taksici Başvurusu',
+  'hastane': 'LSFMD Hastane Başvurusu',
+};
+
 const Basvuru = () => {
+  const { user, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const particles = useMemo(() => generateFloatingParticles(25), []);
+  
+  const [isWhitelistApproved, setIsWhitelistApproved] = useState(false);
+  const [userApplications, setUserApplications] = useState<UserApplication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch profile to check whitelist status
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_whitelist_approved')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+        } else if (profile) {
+          setIsWhitelistApproved(profile.is_whitelist_approved || false);
+        }
+
+        // Fetch user's applications
+        const { data: applications, error: appError } = await supabase
+          .from('applications')
+          .select('id, type, status, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (appError) {
+          console.error('Applications fetch error:', appError);
+        } else {
+          setUserApplications(applications || []);
+        }
+      } catch (error) {
+        console.error('Data fetch error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!authLoading) {
+      fetchUserData();
+    }
+  }, [user, authLoading]);
+
+  // Get application status for a specific form type
+  const getApplicationStatus = (formType: string): ApplicationStatus => {
+    const app = userApplications.find(a => a.type === formType);
+    if (app) {
+      return app.status as ApplicationStatus;
+    }
+    return "open";
+  };
+
+  // Get application ID for a specific form type
+  const getApplicationId = (formType: string): number | undefined => {
+    const app = userApplications.find(a => a.type === formType);
+    return app?.id;
+  };
+
+  // Check if user has pending whitelist application
+  const hasPendingWhitelist = userApplications.some(
+    a => a.type === 'whitelist' && a.status === 'pending'
+  );
+
+  // Check if user has rejected whitelist application (can reapply)
+  const hasRejectedWhitelist = userApplications.some(
+    a => a.type === 'whitelist' && a.status === 'rejected'
+  );
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -186,28 +304,96 @@ const Basvuru = () => {
     },
   };
 
-  // Example data
-  const basicApplications: ApplicationCardProps[] = [
+  // Whitelist application card status
+  const getWhitelistStatus = (): ApplicationStatus => {
+    if (isWhitelistApproved) return "approved";
+    if (hasPendingWhitelist) return "pending";
+    if (hasRejectedWhitelist) return "open"; // Can reapply after rejection
+    return "open";
+  };
+
+  // Role applications - locked if not whitelist approved
+  const roleApplications: ApplicationCardProps[] = [
     { 
-      title: "Whitelist Başvurusu", 
-      status: "approved",
+      title: "Birlik Başvurusu", 
+      status: isWhitelistApproved ? "closed" : "locked" 
+    },
+    { 
+      title: "LSPD Akademi Başvurusu", 
+      status: isWhitelistApproved ? getApplicationStatus('lspd-akademi') : "locked",
+      formId: "lspd-akademi", 
+      featured: isWhitelistApproved,
+      applicationId: getApplicationId('lspd-akademi')
+    },
+    { 
+      title: "Alt Karakter Başvurusu", 
+      status: isWhitelistApproved ? "closed" : "locked" 
+    },
+    { 
+      title: "Şirket Başvurusu", 
+      status: isWhitelistApproved ? getApplicationStatus('sirket') : "locked",
+      formId: "sirket", 
+      featured: isWhitelistApproved,
+      applicationId: getApplicationId('sirket')
+    },
+    { 
+      title: "Taksici Başvurusu", 
+      status: isWhitelistApproved ? getApplicationStatus('taksici') : "locked",
+      formId: "taksici", 
+      featured: isWhitelistApproved,
+      applicationId: getApplicationId('taksici')
+    },
+    { 
+      title: "LSFMD Hastane Birimi Başvurusu", 
+      status: isWhitelistApproved ? getApplicationStatus('hastane') : "locked",
+      formId: "hastane", 
+      featured: isWhitelistApproved,
+      applicationId: getApplicationId('hastane')
     },
   ];
 
-  const roleApplications: ApplicationCardProps[] = [
-    { title: "Birlik Başvurusu", status: "closed" },
-    { title: "LSPD Akademi Başvurusu", status: "open", formId: "lspd-akademi", featured: true },
-    { title: "Alt Karakter Başvurusu", status: "closed" },
-    { title: "Şirket Başvurusu", status: "open", formId: "sirket", featured: true },
-    { title: "Taksici Başvurusu", status: "open", formId: "taksici", featured: true },
-    { title: "LSFMD Hastane Birimi Başvurusu", status: "open", formId: "hastane", featured: true },
-  ];
+  // Application history from database
+  const applicationHistory: HistoryItemProps[] = userApplications.map((app, index) => ({
+    id: app.id,
+    title: formTypeNames[app.type] || app.type,
+    status: app.status as "approved" | "pending" | "draft" | "rejected",
+    type: app.type,
+    delay: 0.5 + index * 0.1
+  }));
 
-  const applicationHistory: HistoryItemProps[] = [
-    { title: "Şirket Başvurusu", status: "draft", applicationNumber: "2178" },
-    { title: "Whitelist Başvuru", status: "approved", applicationNumber: "1139" },
-    { title: "Ön Onay", status: "approved", applicationNumber: "576" },
-  ];
+  // Show loading state
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-display text-foreground">Giriş Yapmalısınız</h1>
+            <p className="text-muted-foreground">Başvuru yapabilmek için önce giriş yapmanız gerekmektedir.</p>
+            <Link 
+              to="/"
+              className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Ana Sayfaya Dön
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
@@ -321,31 +507,89 @@ const Basvuru = () => {
             />
             
             <p className="text-muted-foreground max-w-lg mx-auto text-sm leading-relaxed">
-              Sunucuya katılım ve rol yetkileri için gerekli tüm başvurularını buradan yönetebilirsin.
+              {isWhitelistApproved 
+                ? "Sunucuya katılım ve rol yetkileri için gerekli tüm başvurularını buradan yönetebilirsin."
+                : "Sunucuya katılmak için önce Whitelist başvurusu yapmalısın. Onaylandıktan sonra diğer başvuruları yapabilirsin."
+              }
             </p>
+
+            {/* User Status Badge */}
+            <div className="mt-6 flex justify-center">
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
+                isWhitelistApproved 
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+              }`}>
+                {isWhitelistApproved ? (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Onaylı Üye
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-4 h-4" />
+                    Onaysız Üye
+                  </>
+                )}
+              </div>
+            </div>
           </motion.div>
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_380px] gap-8 lg:gap-12">
             {/* Left Column - Applications */}
             <div className="space-y-14">
-              {/* Basic Applications Section */}
-              <motion.section variants={itemVariants} className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                  <h2 className="font-display text-base tracking-[0.25em] text-primary/90 flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    TEMEL BAŞVURULAR
-                  </h2>
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                </div>
+              {/* Whitelist Application Section - Only for non-approved users */}
+              {!isWhitelistApproved && (
+                <motion.section variants={itemVariants} className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                    <h2 className="font-display text-base tracking-[0.25em] text-primary/90 flex items-center gap-3">
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      WHITELIST BAŞVURUSU
+                    </h2>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                  </div>
 
-                <div className="max-w-lg">
-                  {basicApplications.map((app, index) => (
-                    <ApplicationCard key={index} {...app} delay={0.1} />
-                  ))}
-                </div>
-              </motion.section>
+                  <div className="max-w-lg">
+                    <ApplicationCard 
+                      title="Whitelist Başvurusu" 
+                      status={getWhitelistStatus()}
+                      formId="whitelist"
+                      featured={true}
+                      delay={0.1}
+                    />
+                  </div>
+
+                  {hasPendingWhitelist && (
+                    <p className="text-sm text-muted-foreground">
+                      Whitelist başvurunuz inceleniyor. Onaylandığında diğer başvuruları yapabilirsiniz.
+                    </p>
+                  )}
+                </motion.section>
+              )}
+
+              {/* Approved Whitelist Status */}
+              {isWhitelistApproved && (
+                <motion.section variants={itemVariants} className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                    <h2 className="font-display text-base tracking-[0.25em] text-primary/90 flex items-center gap-3">
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      TEMEL BAŞVURULAR
+                    </h2>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                  </div>
+
+                  <div className="max-w-lg">
+                    <ApplicationCard 
+                      title="Whitelist Başvurusu" 
+                      status="approved"
+                      delay={0.1}
+                    />
+                  </div>
+                </motion.section>
+              )}
 
               {/* Role Applications Section */}
               <motion.section variants={itemVariants} className="space-y-6">
@@ -385,9 +629,15 @@ const Basvuru = () => {
 
                   {/* History items */}
                   <div className="space-y-3">
-                    {applicationHistory.map((item, index) => (
-                      <HistoryItem key={index} {...item} delay={0.5 + index * 0.1} />
-                    ))}
+                    {applicationHistory.length > 0 ? (
+                      applicationHistory.map((item) => (
+                        <HistoryItem key={item.id} {...item} />
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Henüz başvuru yapmadınız
+                      </p>
+                    )}
                   </div>
 
                   {/* Footer decoration */}
