@@ -51,7 +51,7 @@ import {
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 import type { UpdateData } from '@/types/update';
 
-type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kurallar' | 'galeri' | 'kullanicilar';
+type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kurallar' | 'galeri' | 'kullanicilar' | 'yetkilendirme';
 type ApplicationFilterType = 'all' | 'whitelist' | 'other';
 type FormFilterType = 'all' | 'whitelist' | 'other';
 type UpdateFilterType = 'all' | 'update' | 'news';
@@ -90,13 +90,17 @@ const Admin = () => {
   };
 
   const handleTabClick = (tabId: TabType) => {
-    // Kurallar ve Galeri için direkt sayfaya yönlendir
+    // Kurallar, Galeri ve Yetkilendirme için direkt sayfaya yönlendir
     if (tabId === 'kurallar') {
       navigate('/admin/rules-editor');
       return;
     }
     if (tabId === 'galeri') {
       navigate('/admin/gallery');
+      return;
+    }
+    if (tabId === 'yetkilendirme') {
+      navigate('/admin/manage-access');
       return;
     }
     
@@ -486,6 +490,7 @@ const Admin = () => {
     { id: 'kurallar' as TabType, label: 'Kurallar', icon: Shield },
     { id: 'galeri' as TabType, label: 'Medya Galeri', icon: ImageIcon },
     { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users },
+    { id: 'yetkilendirme' as TabType, label: 'Yetki Yönetimi', icon: ShieldCheck },
   ];
 
   return (

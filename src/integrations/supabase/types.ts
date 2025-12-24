@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_2fa_settings: {
+        Row: {
+          created_at: string | null
+          failed_attempts: number | null
+          id: string
+          is_blocked: boolean | null
+          is_provisioned: boolean | null
+          last_failed_at: string | null
+          totp_secret: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          failed_attempts?: number | null
+          id?: string
+          is_blocked?: boolean | null
+          is_provisioned?: boolean | null
+          last_failed_at?: string | null
+          totp_secret?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          failed_attempts?: number | null
+          id?: string
+          is_blocked?: boolean | null
+          is_provisioned?: boolean | null
+          last_failed_at?: string | null
+          totp_secret?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           author_id: string | null
