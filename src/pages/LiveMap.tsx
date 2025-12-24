@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Excalidraw } from '@excalidraw/excalidraw';
+import { Excalidraw, exportToCanvas } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Eye, EyeOff, Wifi, WifiOff, RefreshCw, AlertTriangle, Crosshair } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader2, Eye, EyeOff, Wifi, WifiOff, RefreshCw, AlertTriangle, Crosshair, Sun, Moon } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,7 +34,8 @@ const normalizeFiles = (files: BinaryFiles | undefined): BinaryFiles => {
   return normalized;
 };
 
-const DEFAULT_VIEW_BG = '#ffffff';
+const DEFAULT_VIEW_BG_LIGHT = 'hsl(var(--foreground))';
+const DEFAULT_VIEW_BG_DARK = 'hsl(var(--background))';
 
 /**
  * Normalize elements - fixes image status and filters deleted elements
