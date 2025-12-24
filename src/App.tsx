@@ -13,6 +13,7 @@ import Basvuru from "./pages/Basvuru";
 import BasvuruForm from "./pages/BasvuruForm";
 import Admin from "./pages/Admin";
 import AdminBasvuruDetay from "./pages/AdminBasvuruDetay";
+import FormBuilder from "./pages/admin/FormBuilder";
 import NotFound from "./pages/NotFound";
 import AmbientParticles from "./components/AmbientParticles";
 
@@ -36,6 +37,8 @@ const App = () => (
             <Route path="/basvuru/:formId" element={<BasvuruForm />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/basvuru/:id" element={<AdminBasvuruDetay />} />
+            <Route path="/admin/form-builder" element={<FormBuilder />} />
+            <Route path="/admin/form-builder/:id" element={<FormBuilder />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

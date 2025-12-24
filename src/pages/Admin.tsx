@@ -10,7 +10,8 @@ import {
   Check, 
   X, 
   Loader2,
-  Shield
+  Shield,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -248,9 +249,15 @@ const Admin = () => {
       <main className="flex-1 p-8">
         {activeTab === 'basvurular' && (
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-foreground">Başvurular</h2>
-              <p className="text-muted-foreground">Tüm başvuruları görüntüle ve yönet</p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Başvurular</h2>
+                <p className="text-muted-foreground">Tüm başvuruları görüntüle ve yönet</p>
+              </div>
+              <Button onClick={() => navigate('/admin/form-builder')} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Yeni Form Oluştur
+              </Button>
             </div>
 
             {isLoadingData ? (
