@@ -2,13 +2,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Bell, BellOff, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useNotifications, Notification } from "@/hooks/useNotifications";
+import { Notification } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 
 interface NotificationsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  notifications: Notification[];
+  unreadCount: number;
+  isLoading: boolean;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
 }
 
 const NotificationItem = ({ 
@@ -67,8 +72,15 @@ const NotificationItem = ({
   );
 };
 
-const NotificationsModal = ({ isOpen, onClose }: NotificationsModalProps) => {
-  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } = useNotifications();
+const NotificationsModal = ({ 
+  isOpen, 
+  onClose, 
+  notifications, 
+  unreadCount, 
+  isLoading, 
+  markAsRead, 
+  markAllAsRead 
+}: NotificationsModalProps) => {
 
   return (
     <AnimatePresence>

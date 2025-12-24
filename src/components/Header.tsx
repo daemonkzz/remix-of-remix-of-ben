@@ -19,7 +19,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Header = () => {
   const { user, profile, isLoading, signOut } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { notifications, unreadCount, isLoading: notificationsLoading, markAsRead, markAllAsRead } = useNotifications();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -462,7 +462,15 @@ const Header = () => {
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
       
       {/* Notifications Modal */}
-      <NotificationsModal isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
+      <NotificationsModal 
+        isOpen={isNotificationsOpen} 
+        onClose={() => setIsNotificationsOpen(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        isLoading={notificationsLoading}
+        markAsRead={markAsRead}
+        markAllAsRead={markAllAsRead}
+      />
     </motion.header>
   );
 };
