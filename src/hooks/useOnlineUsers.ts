@@ -41,7 +41,12 @@ export const useOnlineUsers = (channelName: string = 'online-hikaye-users') => {
           }
         });
 
-        setOnlineUsers(users);
+        // Sadece user_id'ler değiştiyse state'i güncelle (flickering önleme)
+        setOnlineUsers(prev => {
+          const prevIds = prev.map(u => u.user_id).sort().join(',');
+          const newIds = users.map(u => u.user_id).sort().join(',');
+          return prevIds === newIds ? prev : users;
+        });
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         console.log('User joined:', key, newPresences);
