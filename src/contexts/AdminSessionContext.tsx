@@ -30,38 +30,39 @@ export const useAdminSession = () => {
   return context;
 };
 
-// Check if session is valid from storage
-const getStoredSession = (userId: string): boolean => {
+// Get stored session expiry (ms) for this user, if valid
+const getStoredSessionExpiry = (userId: string): number | null => {
   try {
     const storedUserId = sessionStorage.getItem(SESSION_KEY);
     const expiryStr = sessionStorage.getItem(SESSION_EXPIRY_KEY);
-    
+
     if (!storedUserId || !expiryStr || storedUserId !== userId) {
-      return false;
+      return null;
     }
-    
+
     const expiry = parseInt(expiryStr, 10);
-    if (Date.now() > expiry) {
+    if (!Number.isFinite(expiry) || Date.now() > expiry) {
       // Session expired, clear it
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(SESSION_EXPIRY_KEY);
-      return false;
+      return null;
     }
-    
-    return true;
+
+    return expiry;
   } catch {
-    return false;
+    return null;
   }
 };
 
-// Save session to storage
-const saveSession = (userId: string) => {
+// Save/extend session in storage and return expiry (ms)
+const saveSession = (userId: string): number | null => {
   try {
     const expiry = Date.now() + IDLE_TIMEOUT;
     sessionStorage.setItem(SESSION_KEY, userId);
     sessionStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
+    return expiry;
   } catch {
-    // Ignore storage errors
+    return null;
   }
 };
 
@@ -89,8 +90,11 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (authLoading) return;
 
     if (user) {
-      const hasValidSession = getStoredSession(user.id);
+      const expiry = getStoredSessionExpiry(user.id);
+      const hasValidSession = !!expiry;
+
       setIsAdminAuthenticated(hasValidSession);
+      setRemainingTime(null);
 
       if (!hasValidSession) {
         // Expired/wrong user session, keep storage clean
@@ -98,6 +102,7 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     } else {
       setIsAdminAuthenticated(false);
+      setRemainingTime(null);
       clearSession();
     }
   }, [user, authLoading]);
@@ -136,54 +141,93 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     fetch2FASettings();
   }, [fetch2FASettings]);
 
+  const isInAdminArea = location.pathname.startsWith('/admin') && location.pathname !== '/admin/locked';
+
+  const createOrExtendSession = useCallback(
+    (uid?: string | null) => {
+      if (!uid) return null;
+      const expiry = saveSession(uid);
+      return expiry;
+    },
+    []
+  );
+
   // Lock session and redirect to lock screen
   const lockSession = useCallback(() => {
     if (location.pathname !== '/admin/locked' && location.pathname.startsWith('/admin')) {
       setIsAdminAuthenticated(false);
+      setRemainingTime(null);
       clearSession();
       navigate('/admin/locked', { state: { from: location.pathname } });
     }
   }, [navigate, location.pathname]);
 
   // Handle idle timeout
-  const onIdle = useCallback(() => {
-    if (isAdminAuthenticated && location.pathname.startsWith('/admin') && location.pathname !== '/admin/locked') {
-      lockSession();
-    }
-  }, [isAdminAuthenticated, location.pathname, lockSession]);
+  const onIdle = useCallback(
+    () => {
+      if (isAdminAuthenticated && isInAdminArea) {
+        lockSession();
+      }
+    },
+    [isAdminAuthenticated, isInAdminArea, lockSession]
+  );
+
+  const onAction = useCallback(
+    () => {
+      if (!user?.id || !isAdminAuthenticated || !isInAdminArea) return;
+      createOrExtendSession(user.id);
+    },
+    [user?.id, isAdminAuthenticated, isInAdminArea, createOrExtendSession]
+  );
+
+  const onActive = useCallback(
+    () => {
+      if (!user?.id || !isAdminAuthenticated || !isInAdminArea) return;
+      createOrExtendSession(user.id);
+    },
+    [user?.id, isAdminAuthenticated, isInAdminArea, createOrExtendSession]
+  );
 
   // Idle timer
-  const { getRemainingTime } = useIdleTimer({
+  useIdleTimer({
     timeout: IDLE_TIMEOUT,
     onIdle,
+    onAction,
+    onActive,
     debounce: 500,
-    disabled: !isAdminAuthenticated || !location.pathname.startsWith('/admin') || location.pathname === '/admin/locked',
+    disabled: !isAdminAuthenticated || !isInAdminArea,
   });
 
-  // Update remaining time periodically and refresh session expiry
-  // Using a ref to avoid getRemainingTime in dependency array causing restarts
+  // Update remaining time from session expiry in storage (stable + always decrements)
   useEffect(() => {
-    if (!isAdminAuthenticated || !user) {
+    if (!isAdminAuthenticated || !user?.id || !isInAdminArea) {
       setRemainingTime(null);
       return;
     }
 
-    // Initial update
-    setRemainingTime(Math.ceil(getRemainingTime() / 1000));
+    // Treat entering the admin area as activity: start a fresh 10:00 window.
+    createOrExtendSession(user.id);
 
-    const interval = setInterval(() => {
-      const remaining = Math.ceil(getRemainingTime() / 1000);
-      setRemainingTime(remaining);
-      
-      // Refresh session expiry in storage (keep it in sync with idle timer)
-      if (remaining > 0) {
-        saveSession(user.id);
+    const tick = () => {
+      const expiry = getStoredSessionExpiry(user.id);
+      if (!expiry) {
+        lockSession();
+        return;
       }
-    }, 1000);
+
+      const remainingSec = Math.max(0, Math.ceil((expiry - Date.now()) / 1000));
+      setRemainingTime(remainingSec);
+
+      if (remainingSec <= 0) {
+        lockSession();
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdminAuthenticated, user]);
+  }, [isAdminAuthenticated, user?.id, isInAdminArea, createOrExtendSession, lockSession]);
 
   // Verify 2FA code
   const verify2FA = useCallback(async (code: string): Promise<{ success: boolean; error?: string }> => {
@@ -211,7 +255,8 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           .eq('user_id', user.id);
 
         setIsAdminAuthenticated(true);
-        saveSession(user.id);
+        setRemainingTime(null);
+        createOrExtendSession(user.id);
         return { success: true };
       } else {
         // Increment failed attempts
