@@ -121,18 +121,21 @@ export default function WhiteboardEditor() {
       const appState = api.getAppState();
       const files = api.getFiles();
 
+      console.log('[WhiteboardEditor] Elements to save:', elements.length, elements);
+
+      // Deep clone elements to avoid readonly proxy issues
       const sceneData: SceneData = {
-        elements: elements as any[],
+        elements: JSON.parse(JSON.stringify(elements)),
         appState: {
           viewBackgroundColor: appState.viewBackgroundColor,
           zoom: appState.zoom,
           scrollX: appState.scrollX,
           scrollY: appState.scrollY,
         },
-        files,
+        files: JSON.parse(JSON.stringify(files)),
       };
 
-      console.log('[WhiteboardEditor] Saving scene data...');
+      console.log('[WhiteboardEditor] Saving scene data...', sceneData);
       
       const { error } = await supabase
         .from('whiteboards')

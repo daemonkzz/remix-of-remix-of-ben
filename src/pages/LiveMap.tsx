@@ -95,7 +95,9 @@ export default function LiveMap() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[LiveMap] Subscription status:', status);
+      });
 
     return () => {
       console.log('[LiveMap] Cleaning up realtime subscription');
