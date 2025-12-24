@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSession } from '@/contexts/AdminSessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, ShieldX, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
 
 interface AdminRouteGuardProps {
   children: React.ReactNode;
 }
 
-type GuardStatus = 
+type GuardStatus =
   | 'loading'
+  | 'role_check_error'
   | 'not_logged_in'
   | 'not_admin'
   | 'no_2fa_record'
@@ -28,38 +28,47 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
   const { isAdminAuthenticated, isLoading: sessionLoading, admin2FASettings } = useAdminSession();
   const [hasAdminRole, setHasAdminRole] = useState<boolean | null>(null);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
+  const [roleCheckError, setRoleCheckError] = useState<string | null>(null);
 
-  // Check if user has admin role
-  useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!user) {
-        setHasAdminRole(false);
-        setIsCheckingRole(false);
+  const checkAdminRole = useCallback(async () => {
+    if (authLoading) return;
+
+    setRoleCheckError(null);
+    setIsCheckingRole(true);
+
+    if (!user) {
+      setHasAdminRole(false);
+      setIsCheckingRole(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin',
+      });
+
+      if (error) {
+        console.error('Error checking admin role:', error);
+        setHasAdminRole(null);
+        setRoleCheckError('Yetki kontrolü yapılamadı. Lütfen tekrar deneyin.');
         return;
       }
 
-      try {
-        const { data, error } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'admin',
-        });
+      setHasAdminRole(Boolean(data));
+    } catch (error) {
+      console.error('Error checking admin role:', error);
+      setHasAdminRole(null);
+      setRoleCheckError('Yetki kontrolü yapılamadı. Lütfen tekrar deneyin.');
+    } finally {
+      setIsCheckingRole(false);
+    }
+  }, [user, authLoading]);
 
-        if (error) {
-          console.error('Error checking admin role:', error);
-          setHasAdminRole(false);
-        } else {
-          setHasAdminRole(data);
-        }
-      } catch (error) {
-        console.error('Error checking admin role:', error);
-        setHasAdminRole(false);
-      } finally {
-        setIsCheckingRole(false);
-      }
-    };
-
+  // Check if user has admin role
+  useEffect(() => {
     checkAdminRole();
-  }, [user]);
+  }, [checkAdminRole]);
 
   // Skip guard for lock screen
   if (location.pathname === '/admin/locked') {
@@ -71,10 +80,13 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
     if (authLoading || sessionLoading || isCheckingRole) {
       return 'loading';
     }
+    if (roleCheckError) {
+      return 'role_check_error';
+    }
     if (!user) {
       return 'not_logged_in';
     }
-    if (!hasAdminRole) {
+    if (hasAdminRole !== true) {
       return 'not_admin';
     }
     if (!admin2FASettings) {
@@ -106,6 +118,25 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
     );
   }
 
+  // Role check error
+  if (status === 'role_check_error') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
+          <AlertTriangle className="w-16 h-16 text-primary" />
+          <h1 className="text-2xl font-bold text-foreground">Yetki Kontrolü Başarısız</h1>
+          <p className="text-muted-foreground">{roleCheckError}</p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={checkAdminRole}>Tekrar Dene</Button>
+            <Button onClick={() => navigate('/')} variant="outline">
+              Ana Sayfaya Dön
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Not logged in
   if (status === 'not_logged_in') {
     return <Navigate to="/" replace />;
@@ -118,9 +149,7 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
         <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
           <ShieldX className="w-16 h-16 text-destructive" />
           <h1 className="text-2xl font-bold text-foreground">Erişim Reddedildi</h1>
-          <p className="text-muted-foreground">
-            Bu sayfaya erişim yetkiniz bulunmamaktadır.
-          </p>
+          <p className="text-muted-foreground">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
           <Button onClick={() => navigate('/')} variant="outline">
             Ana Sayfaya Dön
           </Button>
@@ -134,7 +163,7 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
-          <ShieldX className="w-16 h-16 text-amber-500" />
+          <ShieldX className="w-16 h-16 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Yetki Bulunamadı</h1>
           <p className="text-muted-foreground">
             Admin paneline erişim yetkiniz bulunmamaktadır. Bir yönetici tarafından yetkilendirilmeniz gerekmektedir.
@@ -152,7 +181,7 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
-          <Clock className="w-16 h-16 text-amber-500" />
+          <Clock className="w-16 h-16 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Yetkiniz Hazırlanıyor</h1>
           <p className="text-muted-foreground">
             Admin yetkiniz tanımlanmış ancak 2FA kurulumu henüz tamamlanmamış. Lütfen yönetici ile iletişime geçin.
@@ -191,3 +220,4 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
   // Authorized
   return <>{children}</>;
 };
+
