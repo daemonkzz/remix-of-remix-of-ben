@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Map, BookOpen, Info, ChevronUp, Sparkles } from "lucide-react";
+import { Map, BookOpen, Info, ChevronUp, Sparkles, Maximize2, Minimize2, RefreshCw, Loader2, X, Wifi, WifiOff } from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { Button } from "@/components/ui/button";
+import { useWhiteboardViewer } from "@/hooks/useWhiteboardViewer";
 
 const storyContent = [
   {
@@ -50,11 +52,30 @@ const generateFloatingParticles = (count: number) => {
 };
 
 const Hikaye = () => {
-  const [activeTab, setActiveTab] = useState<"whimsical" | "hikaye">("whimsical");
+  const [activeTab, setActiveTab] = useState<"hikaye-tablosu" | "hikaye">("hikaye");
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState("giris");
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const particles = useMemo(() => generateFloatingParticles(20), []);
+
+  // Whiteboard viewer hook
+  const {
+    imageUrl,
+    isLoading: isMapLoading,
+    isConnected,
+    elementCount,
+    fileCount,
+    refresh: refreshMap,
+  } = useWhiteboardViewer({ whiteboardName: 'Ana Harita' });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshMap();
+    setIsRefreshing(false);
+  };
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -78,6 +99,30 @@ const Hikaye = () => {
       },
     },
   };
+
+  // Handle ESC key to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
+  // Prevent body scroll when fullscreen
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isFullscreen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -115,8 +160,81 @@ const Hikaye = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Fullscreen Map Component
+  const FullscreenMap = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] bg-background flex flex-col"
+    >
+      {/* Minimal header */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        {/* Connection status */}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-full border border-border/30">
+          {isConnected ? (
+            <Wifi className="w-3.5 h-3.5 text-primary" />
+          ) : (
+            <WifiOff className="w-3.5 h-3.5 text-muted-foreground" />
+          )}
+          <span className="text-xs text-muted-foreground">
+            {elementCount} öğe
+          </span>
+        </div>
+
+        {/* Refresh button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="w-9 h-9 bg-background/80 backdrop-blur-sm border border-border/30 hover:bg-background"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
+
+        {/* Close button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsFullscreen(false)}
+          className="w-9 h-9 bg-background/80 backdrop-blur-sm border border-border/30 hover:bg-background"
+        >
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Map content */}
+      <div className="flex-1 flex items-center justify-center overflow-auto">
+        {isMapLoading ? (
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-muted-foreground text-sm">Harita yükleniyor...</p>
+          </div>
+        ) : imageUrl ? (
+          <img
+            src={imageUrl}
+            alt="Hikaye Tablosu"
+            className="max-w-full max-h-full object-contain"
+            draggable={false}
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-4 text-muted-foreground">
+            <Map className="w-16 h-16 opacity-30" />
+            <p className="text-sm">Harita boş</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+      {/* Fullscreen Map */}
+      <AnimatePresence>
+        {isFullscreen && <FullscreenMap />}
+      </AnimatePresence>
+
       {/* Floating Particles */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-[1]">
         {particles.map((particle) => (
@@ -181,7 +299,7 @@ const Hikaye = () => {
 
       {/* Scroll to Top Button */}
       <AnimatePresence>
-        {showScrollTop && (
+        {showScrollTop && !isFullscreen && (
           <motion.button
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -253,9 +371,9 @@ const Hikaye = () => {
             variants={itemVariants}
             className="flex justify-center items-center gap-3 md:gap-4 mb-14"
           >
-            {/* Whimsical Info */}
+            {/* Hikaye Tablosu Info */}
             <AnimatePresence mode="wait">
-              {activeTab === "whimsical" && (
+              {activeTab === "hikaye-tablosu" && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8, x: 10 }}
                   animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -277,7 +395,7 @@ const Hikaye = () => {
                       className="w-72 bg-[#1a1a1a] border border-border/60 p-4 shadow-xl"
                     >
                       <p className="text-xs text-foreground/80 leading-relaxed">
-                        Whimsical bilgi metni buraya gelecek.
+                        Sunucumuzun hikaye tablosu - olayların ve karakterlerin görsel haritası.
                       </p>
                     </HoverCardContent>
                   </HoverCard>
@@ -285,18 +403,18 @@ const Hikaye = () => {
               )}
             </AnimatePresence>
 
-            {/* Whimsical Button */}
+            {/* Hikaye Tablosu Button */}
             <motion.button
-              onClick={() => setActiveTab("whimsical")}
+              onClick={() => setActiveTab("hikaye-tablosu")}
               className={`relative flex items-center gap-2.5 px-5 md:px-7 py-3 font-display text-sm tracking-wider transition-all duration-300 rounded-sm overflow-hidden group ${
-                activeTab === "whimsical"
+                activeTab === "hikaye-tablosu"
                   ? "bg-primary text-primary-foreground"
                   : "bg-[#1a1a1a] text-muted-foreground hover:text-foreground border border-border/40 hover:border-border"
               }`}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
-              {activeTab === "whimsical" && (
+              {activeTab === "hikaye-tablosu" && (
                 <>
                   <motion.div 
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent"
@@ -311,7 +429,7 @@ const Hikaye = () => {
                 </>
               )}
               <Map className="w-4 h-4 relative z-10" />
-              <span className="relative z-10">WHIMSICAL</span>
+              <span className="relative z-10">HİKAYE TABLOSU</span>
             </motion.button>
 
             <div className="w-px h-7 bg-border/40" />
@@ -380,45 +498,81 @@ const Hikaye = () => {
 
           {/* Content */}
           <AnimatePresence mode="wait">
-            {activeTab === "whimsical" && (
+            {activeTab === "hikaye-tablosu" && (
               <motion.div
-                key="whimsical"
+                key="hikaye-tablosu"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
-                className="w-full aspect-video relative bg-[#1a1a1a] rounded-lg flex items-center justify-center border border-border/30 overflow-hidden group"
+                className="w-full aspect-video relative bg-[#0a0a0f] rounded-lg flex items-center justify-center border border-border/30 overflow-hidden group"
               >
-                {/* Gradient overlay */}
-                <div 
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: "linear-gradient(135deg, transparent 0%, transparent 40%, hsl(var(--primary) / 0.05) 70%, hsl(var(--primary) / 0.12) 100%)",
-                  }}
-                />
-                
-                {/* Hover glow */}
-                <motion.div 
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                  style={{
-                    background: "radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.1) 0%, transparent 60%)",
-                  }}
-                />
-                
-                <div className="text-center relative z-10">
-                  <motion.div
-                    animate={{ 
-                      opacity: [0.3, 0.5, 0.3],
-                      scale: [1, 1.05, 1],
-                    }}
-                    transition={{ duration: 3, repeat: Infinity }}
+                {/* Fullscreen button */}
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+                  {/* Connection indicator */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-background/60 backdrop-blur-sm rounded-full border border-border/30">
+                    {isConnected ? (
+                      <Wifi className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <WifiOff className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {elementCount} öğe
+                    </span>
+                  </div>
+
+                  {/* Refresh button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="w-8 h-8 bg-background/60 backdrop-blur-sm border border-border/30 hover:bg-background/80"
                   >
-                    <Map className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-                  </motion.div>
-                  <p className="text-muted-foreground/60 text-sm">
-                    Whimsical embed linki buraya eklenecek
-                  </p>
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </Button>
+
+                  {/* Fullscreen button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsFullscreen(true)}
+                    className="w-8 h-8 bg-background/60 backdrop-blur-sm border border-border/30 hover:bg-background/80"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
+
+                {/* Map content */}
+                {isMapLoading ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <p className="text-muted-foreground text-sm">Harita yükleniyor...</p>
+                  </div>
+                ) : imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt="Hikaye Tablosu"
+                    className="w-full h-full object-contain cursor-pointer"
+                    onClick={() => setIsFullscreen(true)}
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="text-center relative z-10">
+                    <motion.div
+                      animate={{ 
+                        opacity: [0.3, 0.5, 0.3],
+                        scale: [1, 1.05, 1],
+                      }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                    >
+                      <Map className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+                    </motion.div>
+                    <p className="text-muted-foreground/60 text-sm">
+                      Harita boş
+                    </p>
+                  </div>
+                )}
               </motion.div>
             )}
 
