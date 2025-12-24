@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/hover-card";
 import { Button } from "@/components/ui/button";
 import { useWhiteboardViewer } from "@/hooks/useWhiteboardViewer";
+import { useAuth } from "@/contexts/AuthContext";
+import OnlineUsersBar from "@/components/OnlineUsersBar";
 
 const storyContent = [
   {
@@ -52,6 +54,7 @@ const generateFloatingParticles = (count: number) => {
 };
 
 const Hikaye = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"hikaye-tablosu" | "hikaye">("hikaye");
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState("giris");
@@ -715,6 +718,21 @@ const Hikaye = () => {
               )}
             </AnimatePresence>
           </motion.div>
+
+          {/* Online Users Bar - only on Hikaye Tablosu tab when logged in */}
+          <AnimatePresence>
+            {user && activeTab === "hikaye-tablosu" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <OnlineUsersBar maxVisible={10} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="mb-14" />
 
           {/* Content */}
           <AnimatePresence mode="wait">
