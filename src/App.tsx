@@ -16,6 +16,7 @@ import AdminBasvuruDetay from "./pages/AdminBasvuruDetay";
 import FormBuilder from "./pages/admin/FormBuilder";
 import UpdateEditor from "./pages/admin/UpdateEditor";
 import RulesEditor from "./pages/admin/RulesEditor";
+import Gallery from "./pages/admin/Gallery";
 import NotFound from "./pages/NotFound";
 import AmbientParticles from "./components/AmbientParticles";
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/admin/update-editor" element={<UpdateEditor />} />
             <Route path="/admin/update-editor/:id" element={<UpdateEditor />} />
             <Route path="/admin/rules-editor" element={<RulesEditor />} />
+            <Route path="/admin/gallery" element={<Gallery />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

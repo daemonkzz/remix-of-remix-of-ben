@@ -126,6 +126,48 @@ export type Database = {
         }
         Relationships: []
       }
+      gallery_images: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          height: number | null
+          id: string
+          mime_type: string | null
+          optimized_size: number
+          original_size: number
+          uploaded_by: string | null
+          url: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          optimized_size: number
+          original_size: number
+          uploaded_by?: string | null
+          url: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          optimized_size?: number
+          original_size?: number
+          uploaded_by?: string | null
+          url?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

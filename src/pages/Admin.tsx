@@ -18,7 +18,8 @@ import {
   ToggleLeft,
   ToggleRight,
   ShieldCheck,
-  Filter
+  Filter,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +51,7 @@ import {
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 import type { UpdateData } from '@/types/update';
 
-type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kurallar' | 'kullanicilar';
+type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kurallar' | 'galeri' | 'kullanicilar';
 type ApplicationFilterType = 'all' | 'whitelist' | 'other';
 type FormFilterType = 'all' | 'whitelist' | 'other';
 type UpdateFilterType = 'all' | 'update' | 'news';
@@ -463,6 +464,7 @@ const Admin = () => {
     { id: 'formlar' as TabType, label: 'Form Şablonları', icon: Settings },
     { id: 'guncellemeler' as TabType, label: 'Güncellemeler', icon: Bell },
     { id: 'kurallar' as TabType, label: 'Kurallar', icon: Shield },
+    { id: 'galeri' as TabType, label: 'Medya Galeri', icon: ImageIcon },
     { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users },
   ];
 
@@ -946,6 +948,28 @@ const Admin = () => {
               <p className="text-muted-foreground mb-4">Kuralları düzenlemek için editöre gidin</p>
               <Button onClick={() => navigate('/admin/rules-editor')} variant="outline">
                 Editöre Git
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'galeri' && (
+          <div>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Medya Galeri</h2>
+                <p className="text-muted-foreground">Görselleri yükle ve yönet</p>
+              </div>
+              <Button onClick={() => navigate('/admin/gallery')} className="gap-2">
+                <ImageIcon className="w-4 h-4" />
+                Galeriye Git
+              </Button>
+            </div>
+            <div className="text-center py-12 bg-card rounded-lg border border-border">
+              <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">Görselleri yüklemek ve yönetmek için galeriye gidin</p>
+              <Button onClick={() => navigate('/admin/gallery')} variant="outline">
+                Galeriye Git
               </Button>
             </div>
           </div>
