@@ -11,7 +11,7 @@ import { FormBuilderQuestions } from '@/components/admin/FormBuilderQuestions';
 import { FormBuilderPages } from '@/components/admin/FormBuilderPages';
 import { FormBuilderSettings } from '@/components/admin/FormBuilderSettings';
 import { FormPreviewModal } from '@/components/admin/FormPreviewModal';
-import type { FormTemplate, FormQuestion, FormSettings, FormPage, defaultFormSettings } from '@/types/formBuilder';
+import type { FormTemplate, FormQuestion, FormSettings, FormPage, FormType } from '@/types/formBuilder';
 
 const FormBuilder = () => {
   const navigate = useNavigate();
@@ -22,6 +22,7 @@ const FormBuilder = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [hasActiveWhitelistForm, setHasActiveWhitelistForm] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -30,6 +31,7 @@ const FormBuilder = () => {
   const [isActive, setIsActive] = useState(true);
   const [questions, setQuestions] = useState<FormQuestion[]>([]);
   const [pages, setPages] = useState<FormPage[]>([]);
+  const [formType, setFormType] = useState<FormType>('other');
   const [settings, setSettings] = useState<FormSettings>({
     discordWebhookUrl: '',
     userAccessTypes: ['verified'],
@@ -37,6 +39,7 @@ const FormBuilder = () => {
     maxApplications: 0,
     accessCodes: [],
     isPasswordProtected: false,
+    formType: 'other',
   });
 
   // Check admin role
@@ -72,6 +75,33 @@ const FormBuilder = () => {
     checkAdminRole();
   }, [user, authLoading, navigate]);
 
+  // Check for active whitelist forms
+  useEffect(() => {
+    const checkActiveWhitelistForm = async () => {
+      if (!isAuthorized) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('form_templates')
+          .select('id, settings')
+          .eq('is_active', true);
+
+        if (error) throw error;
+
+        const activeWhitelist = data?.find((form) => {
+          const settings = form.settings as Record<string, unknown>;
+          return settings?.formType === 'whitelist' && form.id !== id;
+        });
+
+        setHasActiveWhitelistForm(!!activeWhitelist);
+      } catch (error) {
+        console.error('Check whitelist form error:', error);
+      }
+    };
+
+    checkActiveWhitelistForm();
+  }, [isAuthorized, id]);
+
   // Load existing form template if editing
   useEffect(() => {
     if (id && isAuthorized) {
@@ -106,6 +136,9 @@ const FormBuilder = () => {
         const loadedPages = (loadedSettings.pages as FormPage[]) || [];
         setPages(loadedPages);
         
+        const loadedFormType = (loadedSettings.formType as FormType) || 'other';
+        setFormType(loadedFormType);
+        
         setSettings({
           discordWebhookUrl: (loadedSettings.discordWebhookUrl as string) || '',
           userAccessTypes: (loadedSettings.userAccessTypes as ('unverified' | 'verified')[]) || ['verified'],
@@ -113,6 +146,7 @@ const FormBuilder = () => {
           maxApplications: (loadedSettings.maxApplications as number) || 0,
           accessCodes: (loadedSettings.accessCodes as string[]) || [],
           isPasswordProtected: (loadedSettings.isPasswordProtected as boolean) || false,
+          formType: loadedFormType,
         });
       }
     } catch (error) {
@@ -122,6 +156,16 @@ const FormBuilder = () => {
       setIsLoading(false);
     }
   };
+
+  // Sync formType with settings
+  useEffect(() => {
+    setSettings((prev) => ({
+      ...prev,
+      formType,
+      // If whitelist, only unverified users can access
+      userAccessTypes: formType === 'whitelist' ? ['unverified'] : prev.userAccessTypes,
+    }));
+  }, [formType]);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -134,12 +178,19 @@ const FormBuilder = () => {
       return;
     }
 
+    // Check if trying to activate a whitelist form when another is already active
+    if (formType === 'whitelist' && isActive && hasActiveWhitelistForm) {
+      toast.error('Aynı anda yalnızca bir whitelist formu aktif olabilir');
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Include pages in settings for storage
       const settingsWithPages = {
         ...settings,
         pages: pages,
+        formType: formType,
       };
 
       const formData = {
@@ -225,7 +276,7 @@ const FormBuilder = () => {
                   {id ? 'Form Düzenle' : 'Yeni Form Oluştur'}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Gelişmiş Form Yöneticisi
+                  {formType === 'whitelist' ? 'Whitelist Formu' : 'Gelişmiş Form Yöneticisi'}
                 </p>
               </div>
             </div>
@@ -276,6 +327,10 @@ const FormBuilder = () => {
               setCoverImageUrl={setCoverImageUrl}
               isActive={isActive}
               setIsActive={setIsActive}
+              formType={formType}
+              setFormType={setFormType}
+              hasActiveWhitelistForm={hasActiveWhitelistForm}
+              currentFormId={id}
             />
           </TabsContent>
 

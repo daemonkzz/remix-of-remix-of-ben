@@ -7,6 +7,7 @@ export type QuestionType =
   | 'discord_id';
 
 export type UserAccessType = 'unverified' | 'verified';
+export type FormType = 'whitelist' | 'other';
 
 export interface FormPage {
   id: string;
@@ -31,6 +32,7 @@ export interface FormSettings {
   maxApplications: number;
   accessCodes: string[]; // Password codes for protected forms
   isPasswordProtected: boolean;
+  formType: FormType; // 'whitelist' or 'other'
 }
 
 export interface FormTemplate {
@@ -52,4 +54,5 @@ export const defaultFormSettings: FormSettings = {
   maxApplications: 0,
   accessCodes: [],
   isPasswordProtected: false,
+  formType: 'other', // Default to other forms
 };

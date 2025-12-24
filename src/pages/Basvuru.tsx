@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import type { FormQuestion, FormSettings } from "@/types/formBuilder";
+import type { FormQuestion, FormSettings, FormType } from "@/types/formBuilder";
 
 // Application card types
 type ApplicationStatus = "open" | "closed" | "approved" | "pending" | "rejected" | "locked";
@@ -290,6 +290,8 @@ const Basvuru = () => {
 
   // Get application status for a specific form
   const getApplicationStatus = (formId: string, template: FormTemplate): ApplicationStatus => {
+    const formType = (template.settings as any)?.formType as FormType || 'other';
+    
     // Check if user has existing pending application for this form type
     const pendingApp = userApplications.find(a => a.type === formId && a.status === 'pending');
     if (pendingApp) {
@@ -303,7 +305,15 @@ const Basvuru = () => {
       if (app.status === 'rejected') return "rejected";
     }
 
-    // Check user access types
+    // Whitelist forms are only for unverified users
+    if (formType === 'whitelist') {
+      if (isWhitelistApproved) {
+        return "locked"; // Already verified, can't apply to whitelist
+      }
+      return "open";
+    }
+
+    // Other forms - check user access types
     const userAccessTypes = (template.settings as any)?.userAccessTypes || ['verified'];
     
     // Check if user can access based on their verification status
@@ -327,6 +337,10 @@ const Basvuru = () => {
 
     return "open";
   };
+
+  // Separate whitelist and other forms
+  const whitelistForms = formTemplates.filter(t => (t.settings as any)?.formType === 'whitelist');
+  const otherForms = formTemplates.filter(t => (t.settings as any)?.formType !== 'whitelist');
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -536,19 +550,48 @@ const Basvuru = () => {
                   <p className="text-muted-foreground">Henüz aktif başvuru formu bulunmuyor</p>
                 </motion.div>
               ) : (
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {formTemplates.map((template, index) => (
-                    <ApplicationCard
-                      key={template.id}
-                      title={template.title}
-                      description={template.description}
-                      status={getApplicationStatus(template.id, template)}
-                      formId={template.id}
-                      featured={true}
-                      delay={0.1 + index * 0.1}
-                      coverImage={template.cover_image_url}
-                    />
-                  ))}
+                <div className="space-y-6">
+                  {/* Whitelist Forms Section */}
+                  {whitelistForms.length > 0 && !isWhitelistApproved && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-primary tracking-wide">Whitelist Başvurusu</h3>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {whitelistForms.map((template, index) => (
+                          <ApplicationCard
+                            key={template.id}
+                            title={template.title}
+                            description={template.description}
+                            status={getApplicationStatus(template.id, template)}
+                            formId={template.id}
+                            featured={true}
+                            delay={0.1 + index * 0.1}
+                            coverImage={template.cover_image_url}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other Forms Section */}
+                  {otherForms.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-muted-foreground tracking-wide">Diğer Başvurular</h3>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {otherForms.map((template, index) => (
+                          <ApplicationCard
+                            key={template.id}
+                            title={template.title}
+                            description={template.description}
+                            status={getApplicationStatus(template.id, template)}
+                            formId={template.id}
+                            featured={true}
+                            delay={0.2 + index * 0.1}
+                            coverImage={template.cover_image_url}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>

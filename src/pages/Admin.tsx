@@ -16,7 +16,9 @@ import {
   Pencil,
   Trash2,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  ShieldCheck,
+  Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,9 +40,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { FormQuestion, FormSettings } from '@/types/formBuilder';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 
 type TabType = 'basvurular' | 'formlar' | 'duyurular' | 'kullanicilar';
+type ApplicationFilterType = 'all' | 'whitelist' | 'other';
+type FormFilterType = 'all' | 'whitelist' | 'other';
 
 interface Application {
   id: number;
@@ -74,6 +85,10 @@ const Admin = () => {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [deletingFormId, setDeletingFormId] = useState<string | null>(null);
   const [togglingFormId, setTogglingFormId] = useState<string | null>(null);
+  
+  // Filters
+  const [applicationFilter, setApplicationFilter] = useState<ApplicationFilterType>('all');
+  const [formFilter, setFormFilter] = useState<FormFilterType>('all');
 
   // Check if user has admin role
   useEffect(() => {
@@ -121,6 +136,7 @@ const Admin = () => {
     if (isAuthorized) {
       if (activeTab === 'basvurular') {
         fetchApplications();
+        fetchFormTemplates(); // Also fetch to get form names
       } else if (activeTab === 'formlar') {
         fetchFormTemplates();
       }
@@ -202,7 +218,19 @@ const Admin = () => {
     }
   };
 
-  const toggleFormStatus = async (formId: string, currentStatus: boolean) => {
+  const toggleFormStatus = async (formId: string, currentStatus: boolean, isWhitelist: boolean) => {
+    // Check if trying to activate a whitelist form when another is active
+    if (!currentStatus && isWhitelist) {
+      const otherActiveWhitelist = formTemplates.find(f => {
+        const fType = (f.settings as any)?.formType;
+        return f.id !== formId && f.is_active && fType === 'whitelist';
+      });
+      if (otherActiveWhitelist) {
+        toast.error('Aynı anda yalnızca bir whitelist formu aktif olabilir');
+        return;
+      }
+    }
+
     setTogglingFormId(formId);
     try {
       const { error } = await supabase
@@ -249,6 +277,18 @@ const Admin = () => {
     }
   };
 
+  const getFormType = (template: FormTemplate): FormType => {
+    return (template.settings as any)?.formType || 'other';
+  };
+
+  const getFormTypeByFormId = (formId: string): FormType => {
+    const template = formTemplates.find(t => t.id === formId);
+    if (template) {
+      return getFormType(template);
+    }
+    return 'other';
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
@@ -293,6 +333,20 @@ const Admin = () => {
     if (template) return template.title;
     return type;
   };
+
+  // Filter applications
+  const filteredApplications = applications.filter(app => {
+    if (applicationFilter === 'all') return true;
+    const formType = getFormTypeByFormId(app.type);
+    return formType === applicationFilter;
+  });
+
+  // Filter form templates
+  const filteredFormTemplates = formTemplates.filter(template => {
+    if (formFilter === 'all') return true;
+    const formType = getFormType(template);
+    return formType === formFilter;
+  });
 
   // Show loading while checking auth
   if (authLoading || isCheckingAuth) {
@@ -373,16 +427,38 @@ const Admin = () => {
                 <h2 className="text-2xl font-bold text-foreground">Başvurular</h2>
                 <p className="text-muted-foreground">Tüm başvuruları görüntüle ve yönet</p>
               </div>
+              
+              {/* Application Filter */}
+              <div className="flex items-center gap-3">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Select value={applicationFilter} onValueChange={(v) => setApplicationFilter(v as ApplicationFilterType)}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filtrele" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Başvurular</SelectItem>
+                    <SelectItem value="whitelist">Whitelist Başvuruları</SelectItem>
+                    <SelectItem value="other">Diğer Başvurular</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {isLoadingData ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-            ) : applications.length === 0 ? (
+            ) : filteredApplications.length === 0 ? (
               <div className="text-center py-12 bg-card rounded-lg border border-border">
                 <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Henüz başvuru bulunmuyor</p>
+                <p className="text-muted-foreground">
+                  {applicationFilter === 'all' 
+                    ? 'Henüz başvuru bulunmuyor'
+                    : applicationFilter === 'whitelist'
+                    ? 'Whitelist başvurusu bulunmuyor'
+                    : 'Diğer başvuru bulunmuyor'
+                  }
+                </p>
               </div>
             ) : (
               <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -391,64 +467,80 @@ const Admin = () => {
                     <TableRow className="border-border hover:bg-transparent">
                       <TableHead className="text-muted-foreground">Başvuran</TableHead>
                       <TableHead className="text-muted-foreground">Form</TableHead>
+                      <TableHead className="text-muted-foreground">Tip</TableHead>
                       <TableHead className="text-muted-foreground">Tarih</TableHead>
                       <TableHead className="text-muted-foreground">Durum</TableHead>
                       <TableHead className="text-muted-foreground text-right">İşlemler</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {applications.map((app) => (
-                      <TableRow 
-                        key={app.id} 
-                        className="border-border cursor-pointer hover:bg-muted/50"
-                        onClick={() => navigate(`/admin/basvuru/${app.id}`)}
-                      >
-                        <TableCell className="font-medium text-foreground">
-                          {getCharacterName(app.content as Record<string, string>)}
-                        </TableCell>
-                        <TableCell className="text-foreground">
-                          {getFormTypeName(app.type)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(app.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(app.status)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300"
-                              onClick={() => updateApplicationStatus(app.id, 'approved')}
-                              disabled={updatingId === app.id || app.status === 'approved'}
-                            >
-                              {updatingId === app.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Check className="w-4 h-4" />
-                              )}
-                              <span className="ml-1">Onayla</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:text-red-300"
-                              onClick={() => updateApplicationStatus(app.id, 'rejected')}
-                              disabled={updatingId === app.id || app.status === 'rejected'}
-                            >
-                              {updatingId === app.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <X className="w-4 h-4" />
-                              )}
-                              <span className="ml-1">Reddet</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredApplications.map((app) => {
+                      const formType = getFormTypeByFormId(app.type);
+                      return (
+                        <TableRow 
+                          key={app.id} 
+                          className="border-border cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/admin/basvuru/${app.id}`)}
+                        >
+                          <TableCell className="font-medium text-foreground">
+                            {getCharacterName(app.content as Record<string, string>)}
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {getFormTypeName(app.type)}
+                          </TableCell>
+                          <TableCell>
+                            {formType === 'whitelist' ? (
+                              <Badge className="bg-primary/20 text-primary border-primary/30 gap-1">
+                                <ShieldCheck className="w-3 h-3" />
+                                Whitelist
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                Diğer
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(app.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(app.status)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300"
+                                onClick={() => updateApplicationStatus(app.id, 'approved')}
+                                disabled={updatingId === app.id || app.status === 'approved'}
+                              >
+                                {updatingId === app.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Check className="w-4 h-4" />
+                                )}
+                                <span className="ml-1">Onayla</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                                onClick={() => updateApplicationStatus(app.id, 'rejected')}
+                                disabled={updatingId === app.id || app.status === 'rejected'}
+                              >
+                                {updatingId === app.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <X className="w-4 h-4" />
+                                )}
+                                <span className="ml-1">Reddet</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -464,20 +556,41 @@ const Admin = () => {
                 <h2 className="text-2xl font-bold text-foreground">Form Şablonları</h2>
                 <p className="text-muted-foreground">Başvuru formlarını oluştur ve yönet</p>
               </div>
-              <Button onClick={() => navigate('/admin/form-builder')} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Yeni Form Oluştur
-              </Button>
+              <div className="flex items-center gap-3">
+                {/* Form Filter */}
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Select value={formFilter} onValueChange={(v) => setFormFilter(v as FormFilterType)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrele" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Formlar</SelectItem>
+                    <SelectItem value="whitelist">Whitelist Formları</SelectItem>
+                    <SelectItem value="other">Diğer Formlar</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => navigate('/admin/form-builder')} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Yeni Form Oluştur
+                </Button>
+              </div>
             </div>
 
             {isLoadingData ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-            ) : formTemplates.length === 0 ? (
+            ) : filteredFormTemplates.length === 0 ? (
               <div className="text-center py-12 bg-card rounded-lg border border-border">
                 <Settings className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">Henüz form şablonu bulunmuyor</p>
+                <p className="text-muted-foreground mb-4">
+                  {formFilter === 'all' 
+                    ? 'Henüz form şablonu bulunmuyor'
+                    : formFilter === 'whitelist'
+                    ? 'Whitelist formu bulunmuyor'
+                    : 'Diğer form bulunmuyor'
+                  }
+                </p>
                 <Button onClick={() => navigate('/admin/form-builder')} className="gap-2">
                   <Plus className="w-4 h-4" />
                   İlk Formu Oluştur
@@ -489,6 +602,7 @@ const Admin = () => {
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
                       <TableHead className="text-muted-foreground">Form Adı</TableHead>
+                      <TableHead className="text-muted-foreground">Tip</TableHead>
                       <TableHead className="text-muted-foreground">Soru Sayısı</TableHead>
                       <TableHead className="text-muted-foreground">Durum</TableHead>
                       <TableHead className="text-muted-foreground">Oluşturulma</TableHead>
@@ -496,64 +610,80 @@ const Admin = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {formTemplates.map((template) => (
-                      <TableRow key={template.id} className="border-border">
-                        <TableCell className="font-medium text-foreground">
-                          {template.title}
-                        </TableCell>
-                        <TableCell className="text-foreground">
-                          {template.questions?.length || 0} soru
-                        </TableCell>
-                        <TableCell>
-                          {template.is_active ? (
-                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                              Aktif
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-muted text-muted-foreground border-border">
-                              Pasif
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(template.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => toggleFormStatus(template.id, template.is_active)}
-                              disabled={togglingFormId === template.id}
-                              title={template.is_active ? 'Pasif Yap' : 'Aktif Yap'}
-                            >
-                              {togglingFormId === template.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : template.is_active ? (
-                                <ToggleRight className="w-4 h-4 text-emerald-400" />
-                              ) : (
-                                <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => navigate(`/admin/form-builder/${template.id}`)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeletingFormId(template.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredFormTemplates.map((template) => {
+                      const formType = getFormType(template);
+                      const isWhitelist = formType === 'whitelist';
+                      return (
+                        <TableRow key={template.id} className="border-border">
+                          <TableCell className="font-medium text-foreground">
+                            {template.title}
+                          </TableCell>
+                          <TableCell>
+                            {isWhitelist ? (
+                              <Badge className="bg-primary/20 text-primary border-primary/30 gap-1">
+                                <ShieldCheck className="w-3 h-3" />
+                                Whitelist
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                Diğer
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {template.questions?.length || 0} soru
+                          </TableCell>
+                          <TableCell>
+                            {template.is_active ? (
+                              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                                Aktif
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-muted text-muted-foreground border-border">
+                                Pasif
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(template.created_at)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => toggleFormStatus(template.id, template.is_active, isWhitelist)}
+                                disabled={togglingFormId === template.id}
+                                title={template.is_active ? 'Pasif Yap' : 'Aktif Yap'}
+                              >
+                                {togglingFormId === template.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : template.is_active ? (
+                                  <ToggleRight className="w-4 h-4 text-emerald-400" />
+                                ) : (
+                                  <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => navigate(`/admin/form-builder/${template.id}`)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setDeletingFormId(template.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
