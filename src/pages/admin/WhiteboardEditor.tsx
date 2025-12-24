@@ -31,8 +31,15 @@ export default function WhiteboardEditor() {
   
   // Refs for stability
   const isHydratingRef = useRef(false);
+  const hasHydratedRef = useRef(false);
   const saveInFlightRef = useRef(false);
   const editorRef = useRef<Editor | null>(null);
+  const whiteboardIdRef = useRef<string | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    whiteboardIdRef.current = whiteboardId;
+  }, [whiteboardId]);
 
   // Window-level error catching for debugging
   useEffect(() => {
@@ -155,9 +162,12 @@ export default function WhiteboardEditor() {
     },
   }), []);
 
-  // Save function with inFlight lock
-  const saveWhiteboard = useCallback(async (editorInstance: Editor) => {
-    if (!editorInstance || !whiteboardId) {
+  // Save function using refs to avoid dependency changes
+  const saveWhiteboard = useCallback(async () => {
+    const currentEditor = editorRef.current;
+    const currentWhiteboardId = whiteboardIdRef.current;
+
+    if (!currentEditor || !currentWhiteboardId) {
       console.log('[WhiteboardEditor] Save skipped: no editor or whiteboardId');
       return;
     }
@@ -178,7 +188,7 @@ export default function WhiteboardEditor() {
     setIsSaving(true);
     
     try {
-      const snapshot = getSnapshot(editorInstance.store);
+      const snapshot = getSnapshot(currentEditor.store);
       console.log('[WhiteboardEditor] Saving snapshot...');
       
       const { error } = await supabase
@@ -187,7 +197,7 @@ export default function WhiteboardEditor() {
           scene_data: snapshot,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', whiteboardId);
+        .eq('id', currentWhiteboardId);
 
       if (error) {
         console.error('[WhiteboardEditor] Save error:', error);
@@ -201,7 +211,59 @@ export default function WhiteboardEditor() {
       saveInFlightRef.current = false;
       setIsSaving(false);
     }
-  }, [whiteboardId]);
+  }, []);
+
+  // Load snapshot ONCE when editor and initialSnapshot are ready
+  useEffect(() => {
+    if (!editor || hasHydratedRef.current) return;
+
+    // If there's an initial snapshot, load it
+    if (initialSnapshot) {
+      try {
+        console.log('[WhiteboardEditor] Loading initial snapshot...');
+        isHydratingRef.current = true;
+        loadSnapshot(editor.store, initialSnapshot);
+        console.log('[WhiteboardEditor] Initial snapshot loaded');
+      } catch (e) {
+        console.error('[WhiteboardEditor] Could not load initial snapshot:', e);
+        toast.error('Snapshot yüklenemedi, temiz sayfa açılıyor');
+      } finally {
+        // Delay turning off hydrating to ensure store settles
+        setTimeout(() => {
+          isHydratingRef.current = false;
+          hasHydratedRef.current = true;
+          console.log('[WhiteboardEditor] Hydration complete, autosave enabled');
+        }, 500);
+      }
+    } else {
+      // No snapshot, mark as hydrated
+      hasHydratedRef.current = true;
+      console.log('[WhiteboardEditor] No initial snapshot, starting fresh');
+    }
+  }, [editor, initialSnapshot]);
+
+  // Set up autosave listener SEPARATELY from onMount
+  useEffect(() => {
+    if (!editor || !whiteboardId) return;
+
+    console.log('[WhiteboardEditor] Setting up autosave listener...');
+
+    const throttledSave = throttle(() => {
+      if (!isHydratingRef.current) {
+        saveWhiteboard();
+      }
+    }, 3000);
+
+    const cleanup = editor.store.listen(() => {
+      throttledSave();
+    }, { scope: 'document' });
+
+    return () => {
+      console.log('[WhiteboardEditor] Autosave listener cleanup');
+      cleanup();
+      throttledSave.cancel();
+    };
+  }, [editor, whiteboardId, saveWhiteboard]);
 
   // Handle gallery image selection - proper tldraw v4 asset creation
   const handleGallerySelect = useCallback((urls: string[]) => {
@@ -255,10 +317,8 @@ export default function WhiteboardEditor() {
 
   // Manual save button
   const handleManualSave = async () => {
-    if (editor) {
-      await saveWhiteboard(editor);
-      toast.success('Kaydedildi');
-    }
+    await saveWhiteboard();
+    toast.success('Kaydedildi');
   };
 
   // Reset whiteboard
@@ -303,51 +363,12 @@ export default function WhiteboardEditor() {
     }
   };
 
-  // Handle editor mount
+  // STABLE onMount - no dependencies, just sets the editor ref
   const handleEditorMount = useCallback((editorInstance: Editor) => {
     console.log('[WhiteboardEditor] Editor mounted');
     setEditor(editorInstance);
     editorRef.current = editorInstance;
-    
-    // Load initial snapshot if available
-    if (initialSnapshot) {
-      try {
-        console.log('[WhiteboardEditor] Loading initial snapshot...');
-        isHydratingRef.current = true;
-        loadSnapshot(editorInstance.store, initialSnapshot);
-        console.log('[WhiteboardEditor] Initial snapshot loaded');
-      } catch (e) {
-        console.error('[WhiteboardEditor] Could not load initial snapshot:', e);
-        toast.error('Snapshot yüklenemedi, temiz sayfa açılıyor');
-      } finally {
-        // Delay turning off hydrating to ensure store settles
-        setTimeout(() => {
-          isHydratingRef.current = false;
-          console.log('[WhiteboardEditor] Hydration complete, autosave enabled');
-        }, 500);
-      }
-    } else {
-      console.log('[WhiteboardEditor] No initial snapshot, starting fresh');
-    }
-
-    // Set up auto-save on store changes with throttle
-    const throttledSave = throttle(() => {
-      if (editorRef.current && !isHydratingRef.current) {
-        saveWhiteboard(editorRef.current);
-      }
-    }, 3000);
-
-    const cleanup = editorInstance.store.listen(() => {
-      throttledSave();
-    }, { scope: 'document' });
-
-    // Cleanup on unmount
-    return () => {
-      console.log('[WhiteboardEditor] Cleaning up...');
-      cleanup();
-      throttledSave.cancel();
-    };
-  }, [initialSnapshot, saveWhiteboard]);
+  }, []);
 
   return (
     <AdminLayout activeTab="canliharita">

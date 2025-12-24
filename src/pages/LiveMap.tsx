@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Tldraw, Editor, getSnapshot, loadSnapshot } from 'tldraw';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Tldraw, Editor, loadSnapshot } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
@@ -12,6 +12,9 @@ export default function LiveMap() {
   const [isLoading, setIsLoading] = useState(true);
   const [whiteboardId, setWhiteboardId] = useState<string | null>(null);
   const [initialSnapshot, setInitialSnapshot] = useState<any>(null);
+  
+  const hasHydratedRef = useRef(false);
+  const editorRef = useRef<Editor | null>(null);
 
   // Load initial whiteboard data
   useEffect(() => {
@@ -44,9 +47,32 @@ export default function LiveMap() {
     loadWhiteboard();
   }, []);
 
-  // Subscribe to realtime updates
+  // Load snapshot ONCE when editor and initialSnapshot are ready
+  useEffect(() => {
+    if (!editor || hasHydratedRef.current) return;
+
+    if (initialSnapshot) {
+      try {
+        console.log('[LiveMap] Loading initial snapshot...');
+        loadSnapshot(editor.store, initialSnapshot);
+        hasHydratedRef.current = true;
+        // Zoom to fit content after loading
+        setTimeout(() => {
+          editor.zoomToFit();
+        }, 100);
+      } catch (e) {
+        console.error('[LiveMap] Could not load initial snapshot:', e);
+      }
+    } else {
+      hasHydratedRef.current = true;
+    }
+  }, [editor, initialSnapshot]);
+
+  // Subscribe to realtime updates SEPARATELY
   useEffect(() => {
     if (!whiteboardId || !editor) return;
+
+    console.log('[LiveMap] Setting up realtime subscription...');
 
     const channel = supabase
       .channel('whiteboard-realtime')
@@ -59,12 +85,12 @@ export default function LiveMap() {
           filter: `id=eq.${whiteboardId}`,
         },
         (payload) => {
-          console.log('Realtime update received:', payload);
+          console.log('[LiveMap] Realtime update received');
           if (payload.new && (payload.new as any).scene_data) {
             try {
               loadSnapshot(editor.store, (payload.new as any).scene_data);
             } catch (e) {
-              console.error('Error loading realtime update:', e);
+              console.error('[LiveMap] Error loading realtime update:', e);
             }
           }
         }
@@ -72,30 +98,20 @@ export default function LiveMap() {
       .subscribe();
 
     return () => {
+      console.log('[LiveMap] Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [whiteboardId, editor]);
 
-  // Handle editor mount
+  // STABLE onMount - no dependencies
   const handleEditorMount = useCallback((editorInstance: Editor) => {
+    console.log('[LiveMap] Editor mounted');
     setEditor(editorInstance);
+    editorRef.current = editorInstance;
     
-    // Make it readonly
+    // Make it readonly immediately
     editorInstance.updateInstanceState({ isReadonly: true });
-    
-    // Load initial snapshot if available
-    if (initialSnapshot) {
-      try {
-        loadSnapshot(editorInstance.store, initialSnapshot);
-        // Zoom to fit content after loading
-        setTimeout(() => {
-          editorInstance.zoomToFit();
-        }, 100);
-      } catch (e) {
-        console.log('Could not load initial snapshot:', e);
-      }
-    }
-  }, [initialSnapshot]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
