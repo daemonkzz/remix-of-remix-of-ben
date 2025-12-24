@@ -48,10 +48,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
+import type { UpdateData } from '@/types/update';
 
 type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kullanicilar';
 type ApplicationFilterType = 'all' | 'whitelist' | 'other';
 type FormFilterType = 'all' | 'whitelist' | 'other';
+type UpdateFilterType = 'all' | 'update' | 'news';
+type UpdateStatusFilterType = 'all' | 'published' | 'draft';
 
 interface Application {
   id: number;
@@ -86,9 +89,16 @@ const Admin = () => {
   const [deletingFormId, setDeletingFormId] = useState<string | null>(null);
   const [togglingFormId, setTogglingFormId] = useState<string | null>(null);
   
+  // Updates
+  const [updates, setUpdates] = useState<UpdateData[]>([]);
+  const [deletingUpdateId, setDeletingUpdateId] = useState<string | null>(null);
+  const [togglingUpdateId, setTogglingUpdateId] = useState<string | null>(null);
+  
   // Filters
   const [applicationFilter, setApplicationFilter] = useState<ApplicationFilterType>('all');
   const [formFilter, setFormFilter] = useState<FormFilterType>('all');
+  const [updateFilter, setUpdateFilter] = useState<UpdateFilterType>('all');
+  const [updateStatusFilter, setUpdateStatusFilter] = useState<UpdateStatusFilterType>('all');
 
   // Check if user has admin role
   useEffect(() => {
@@ -139,6 +149,8 @@ const Admin = () => {
         fetchFormTemplates(); // Also fetch to get form names
       } else if (activeTab === 'formlar') {
         fetchFormTemplates();
+      } else if (activeTab === 'guncellemeler') {
+        fetchUpdates();
       }
     }
   }, [isAuthorized, activeTab]);
@@ -277,6 +289,79 @@ const Admin = () => {
     }
   };
 
+  const fetchUpdates = async () => {
+    setIsLoadingData(true);
+    try {
+      const { data, error } = await supabase
+        .from('updates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Fetch updates error:', error);
+        toast.error('Güncellemeler yüklenirken hata oluştu');
+        return;
+      }
+
+      setUpdates(data || []);
+    } catch (error) {
+      console.error('Fetch error:', error);
+      toast.error('Güncellemeler yüklenirken hata oluştu');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  const toggleUpdateStatus = async (updateId: string, currentStatus: boolean) => {
+    setTogglingUpdateId(updateId);
+    try {
+      const { error } = await supabase
+        .from('updates')
+        .update({ 
+          is_published: !currentStatus,
+          published_at: !currentStatus ? new Date().toISOString() : null
+        })
+        .eq('id', updateId);
+
+      if (error) {
+        console.error('Toggle error:', error);
+        toast.error('Güncelleme durumu değiştirilirken hata oluştu');
+        return;
+      }
+
+      toast.success(currentStatus ? 'Güncelleme taslağa alındı' : 'Güncelleme yayınlandı');
+      fetchUpdates();
+    } catch (error) {
+      console.error('Toggle error:', error);
+      toast.error('Güncelleme durumu değiştirilirken hata oluştu');
+    } finally {
+      setTogglingUpdateId(null);
+    }
+  };
+
+  const deleteUpdate = async (updateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('updates')
+        .delete()
+        .eq('id', updateId);
+
+      if (error) {
+        console.error('Delete error:', error);
+        toast.error('Güncelleme silinirken hata oluştu');
+        return;
+      }
+
+      toast.success('Güncelleme silindi');
+      fetchUpdates();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Güncelleme silinirken hata oluştu');
+    } finally {
+      setDeletingUpdateId(null);
+    }
+  };
+
   const getFormType = (template: FormTemplate): FormType => {
     return (template.settings as any)?.formType || 'other';
   };
@@ -346,6 +431,14 @@ const Admin = () => {
     if (formFilter === 'all') return true;
     const formType = getFormType(template);
     return formType === formFilter;
+  });
+
+  // Filter updates
+  const filteredUpdates = updates.filter(update => {
+    const categoryMatch = updateFilter === 'all' || update.category === updateFilter;
+    const statusMatch = updateStatusFilter === 'all' || 
+      (updateStatusFilter === 'published' ? update.is_published : !update.is_published);
+    return categoryMatch && statusMatch;
   });
 
   // Show loading while checking auth
@@ -698,15 +791,140 @@ const Admin = () => {
                 <h2 className="text-2xl font-bold text-foreground">Güncellemeler</h2>
                 <p className="text-muted-foreground">Güncellemeler ve haberleri yönet</p>
               </div>
-              <Button onClick={() => navigate('/admin/update-editor')} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Yeni Güncelleme
-              </Button>
+              <div className="flex items-center gap-3">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Select value={updateFilter} onValueChange={(v) => setUpdateFilter(v as UpdateFilterType)}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tümü</SelectItem>
+                    <SelectItem value="update">Güncellemeler</SelectItem>
+                    <SelectItem value="news">Haberler</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={updateStatusFilter} onValueChange={(v) => setUpdateStatusFilter(v as UpdateStatusFilterType)}>
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue placeholder="Durum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tümü</SelectItem>
+                    <SelectItem value="published">Yayında</SelectItem>
+                    <SelectItem value="draft">Taslak</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => navigate('/admin/update-editor')} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Yeni Güncelleme
+                </Button>
+              </div>
             </div>
-            <div className="text-center py-12 bg-card rounded-lg border border-border">
-              <Bell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Güncelleme editörüne yönlendirmek için yukarıdaki butona tıklayın</p>
-            </div>
+
+            {isLoadingData ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : filteredUpdates.length === 0 ? (
+              <div className="text-center py-12 bg-card rounded-lg border border-border">
+                <Bell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  {updateFilter === 'all' && updateStatusFilter === 'all'
+                    ? 'Henüz güncelleme bulunmuyor'
+                    : 'Filtreye uygun güncelleme bulunamadı'
+                  }
+                </p>
+                <Button onClick={() => navigate('/admin/update-editor')} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  İlk Güncellemeyi Oluştur
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-card rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-muted-foreground">Başlık</TableHead>
+                      <TableHead className="text-muted-foreground">Kategori</TableHead>
+                      <TableHead className="text-muted-foreground">Versiyon</TableHead>
+                      <TableHead className="text-muted-foreground">Durum</TableHead>
+                      <TableHead className="text-muted-foreground">Tarih</TableHead>
+                      <TableHead className="text-muted-foreground text-right">İşlemler</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUpdates.map((update) => (
+                      <TableRow key={update.id} className="border-border">
+                        <TableCell className="font-medium text-foreground">
+                          {update.title}
+                        </TableCell>
+                        <TableCell>
+                          {update.category === 'update' ? (
+                            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                              Güncelleme
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                              Haber
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {update.version || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {update.is_published ? (
+                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                              Yayında
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-muted text-muted-foreground border-border">
+                              Taslak
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(update.created_at || '')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => toggleUpdateStatus(update.id!, update.is_published)}
+                              disabled={togglingUpdateId === update.id}
+                              title={update.is_published ? 'Taslağa Al' : 'Yayınla'}
+                            >
+                              {togglingUpdateId === update.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : update.is_published ? (
+                                <ToggleRight className="w-4 h-4 text-emerald-400" />
+                              ) : (
+                                <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => navigate(`/admin/update-editor/${update.id}`)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeletingUpdateId(update.id!)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         )}
 
@@ -724,7 +942,7 @@ const Admin = () => {
         )}
       </main>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Form Confirmation Dialog */}
       <AlertDialog open={!!deletingFormId} onOpenChange={() => setDeletingFormId(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
@@ -738,6 +956,27 @@ const Admin = () => {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deletingFormId && deleteFormTemplate(deletingFormId)}
+            >
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Update Confirmation Dialog */}
+      <AlertDialog open={!!deletingUpdateId} onOpenChange={() => setDeletingUpdateId(null)}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">Güncellemeyi Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu güncellemeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border">İptal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deletingUpdateId && deleteUpdate(deletingUpdateId)}
             >
               Sil
             </AlertDialogAction>
