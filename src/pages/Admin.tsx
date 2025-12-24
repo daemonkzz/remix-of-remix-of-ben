@@ -52,7 +52,7 @@ import { SessionTimeoutIndicator } from '@/components/admin/SessionTimeoutIndica
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 import type { UpdateData } from '@/types/update';
 
-type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kurallar' | 'galeri' | 'kullanicilar' | 'yetkilendirme';
+type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'bildirimler' | 'kurallar' | 'galeri' | 'kullanicilar' | 'yetkilendirme';
 type ApplicationFilterType = 'all' | 'whitelist' | 'other';
 type FormFilterType = 'all' | 'whitelist' | 'other';
 type UpdateFilterType = 'all' | 'update' | 'news';
@@ -91,7 +91,7 @@ const Admin = () => {
   };
 
   const handleTabClick = (tabId: TabType) => {
-    // Kurallar, Galeri ve Yetkilendirme için direkt sayfaya yönlendir
+    // Kurallar, Galeri, Yetkilendirme ve Bildirimler için direkt sayfaya yönlendir
     if (tabId === 'kurallar') {
       navigate('/admin/rules-editor');
       return;
@@ -102,6 +102,10 @@ const Admin = () => {
     }
     if (tabId === 'yetkilendirme') {
       navigate('/admin/manage-access');
+      return;
+    }
+    if (tabId === 'bildirimler') {
+      navigate('/admin/notification-editor');
       return;
     }
     
@@ -488,6 +492,7 @@ const Admin = () => {
     { id: 'basvurular' as TabType, label: 'Başvurular', icon: FileText },
     { id: 'formlar' as TabType, label: 'Form Şablonları', icon: Settings },
     { id: 'guncellemeler' as TabType, label: 'Güncellemeler', icon: Bell },
+    { id: 'bildirimler' as TabType, label: 'Bildirimler', icon: Bell },
     { id: 'kurallar' as TabType, label: 'Kurallar', icon: Shield },
     { id: 'galeri' as TabType, label: 'Medya Galeri', icon: ImageIcon },
     { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users },

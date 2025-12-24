@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { Menu, X, LogOut, User, ChevronDown, FileText } from "lucide-react";
+import { Menu, X, LogOut, User, ChevronDown, FileText, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import LoginModal from "@/components/LoginModal";
+import NotificationsModal from "@/components/NotificationsModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,9 +19,11 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Header = () => {
   const { user, profile, isLoading, signOut } = useAuth();
+  const { unreadCount } = useNotifications();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -131,14 +135,19 @@ const Header = () => {
                 </Link>
               </motion.div>
 
-              {/* Center Logo */}
+              {/* Center Logo / Notification Badge */}
               <motion.div
                 className="mx-6"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
               >
-                <AnimatedLogo size="lg" />
+                <AnimatedLogo 
+                  size="lg" 
+                  showNotificationBadge={!!user && unreadCount > 0}
+                  unreadCount={unreadCount}
+                  onNotificationClick={() => setIsNotificationsOpen(true)}
+                />
               </motion.div>
 
               {/* Right Nav Links */}
@@ -252,6 +261,19 @@ const Header = () => {
                         <FileText className="w-4 h-4 text-foreground/70" />
                         <span className="text-sm">Başvuru Merkezi</span>
                       </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem 
+                      onClick={() => setIsNotificationsOpen(true)} 
+                      className="cursor-pointer rounded-md px-3 py-2.5 focus:bg-primary/10"
+                    >
+                      <Bell className="w-4 h-4 mr-2.5 text-foreground/70" />
+                      <span className="text-sm">Bildirimler</span>
+                      {unreadCount > 0 && (
+                        <span className="ml-auto bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
                     </DropdownMenuItem>
                     
                     <DropdownMenuSeparator className="my-2 bg-border/50" />
@@ -438,6 +460,9 @@ const Header = () => {
       
       {/* Login Modal */}
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+      
+      {/* Notifications Modal */}
+      <NotificationsModal isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
     </motion.header>
   );
 };
