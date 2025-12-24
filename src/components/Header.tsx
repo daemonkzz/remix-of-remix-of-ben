@@ -53,7 +53,7 @@ const Header = () => {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Social Icons - Left */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-2 flex-shrink-0 w-[120px]">
             {/* Instagram */}
             <motion.a 
               href="#" 
@@ -175,7 +175,7 @@ const Header = () => {
 
           {/* Auth Button - Right */}
           <motion.div 
-            className="hidden lg:flex items-center gap-3 flex-shrink-0"
+            className="hidden lg:flex items-center gap-3 flex-shrink-0 w-[120px] justify-end"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.6 }}

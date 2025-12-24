@@ -44,7 +44,7 @@ const Footer = () => {
           variants={itemVariants}
         >
           {/* Social Icons - Left */}
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2 flex-shrink-0 w-[120px]">
             {/* Instagram */}
             <motion.a 
               href="#" 
@@ -139,7 +139,7 @@ const Footer = () => {
 
           {/* Right - Info */}
           <motion.div 
-            className="text-right text-[10px] text-foreground/30 leading-relaxed font-light"
+            className="hidden md:block text-right text-[10px] text-foreground/30 leading-relaxed font-light flex-shrink-0 w-[120px]"
             variants={itemVariants}
           >
             <motion.p whileHover={{ color: "hsl(var(--foreground) / 0.5)" }} className="cursor-pointer">Privacy policy</motion.p>
