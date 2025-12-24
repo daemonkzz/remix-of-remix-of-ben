@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import LoginModal from "@/components/LoginModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
+  const { user, isLoading, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -163,23 +165,42 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Book Now Button - Right */}
+          {/* Auth Button - Right */}
           <motion.div 
-            className="hidden lg:block flex-shrink-0"
+            className="hidden lg:flex items-center gap-3 flex-shrink-0"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.6 }}
           >
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button 
-                variant="glow" 
-                size="sm" 
-                className="text-[11px] px-5 h-8 rounded-sm font-medium"
-                onClick={() => setIsLoginModalOpen(true)}
-              >
-                Giriş Yap <span className="ml-1.5">↗</span>
-              </Button>
-            </motion.div>
+            {!isLoading && user ? (
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-foreground/70">
+                  {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                </span>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-[11px] px-4 h-8 rounded-sm font-medium"
+                    onClick={signOut}
+                  >
+                    <LogOut className="w-3 h-3 mr-1.5" />
+                    Çıkış
+                  </Button>
+                </motion.div>
+              </div>
+            ) : (
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  variant="glow" 
+                  size="sm" 
+                  className="text-[11px] px-5 h-8 rounded-sm font-medium"
+                  onClick={() => setIsLoginModalOpen(true)}
+                >
+                  Giriş Yap <span className="ml-1.5">↗</span>
+                </Button>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Mobile Menu Toggle */}
@@ -262,17 +283,37 @@ const Header = () => {
                 Harita
               </motion.a>
               <div className="px-4 pt-2">
-                <Button 
-                  variant="glow" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setIsLoginModalOpen(true);
-                  }}
-                >
-                  Giriş Yap ↗
-                </Button>
+                {!isLoading && user ? (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-sm text-foreground/70 text-center">
+                      {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                    </span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        signOut();
+                      }}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Çıkış Yap
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="glow" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setIsLoginModalOpen(true);
+                    }}
+                  >
+                    Giriş Yap ↗
+                  </Button>
+                )}
               </div>
             </motion.nav>
           )}
