@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Excalidraw } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Wifi, WifiOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -19,6 +19,9 @@ export default function LiveMap() {
   const [isLoading, setIsLoading] = useState(true);
   const [whiteboardId, setWhiteboardId] = useState<string | null>(null);
   const [initialData, setInitialData] = useState<SceneData | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [followMode, setFollowMode] = useState(true);
   
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null);
 
@@ -27,22 +30,39 @@ export default function LiveMap() {
     excalidrawAPIRef.current = excalidrawAPI;
   }, [excalidrawAPI]);
 
+  // Scroll to content helper
+  const scrollToContent = useCallback(() => {
+    const api = excalidrawAPIRef.current;
+    if (!api) return;
+    
+    try {
+      api.scrollToContent(api.getSceneElements(), {
+        fitToViewport: true,
+        viewportZoomFactor: 0.9,
+      });
+    } catch (e) {
+      console.log('[LiveMap] scrollToContent not available');
+    }
+  }, []);
+
   // Load initial whiteboard data
   useEffect(() => {
     const loadWhiteboard = async () => {
       try {
+        console.log('[LiveMap] Loading whiteboard...');
         const { data, error } = await supabase
           .from('whiteboards')
           .select('*')
-          .limit(1)
-          .single();
+          .eq('name', 'Ana Harita')
+          .maybeSingle();
 
         if (error) {
-          console.error('Error loading whiteboard:', error);
+          console.error('[LiveMap] Load error:', error);
           return;
         }
 
         if (data) {
+          console.log('[LiveMap] Loaded whiteboard:', data.id);
           setWhiteboardId(data.id);
           const sceneData = data.scene_data as SceneData | null;
           if (sceneData && sceneData.elements && sceneData.elements.length > 0) {
@@ -50,7 +70,7 @@ export default function LiveMap() {
           }
         }
       } catch (err) {
-        console.error('Load error:', err);
+        console.error('[LiveMap] Load error:', err);
       } finally {
         setIsLoading(false);
       }
@@ -58,6 +78,15 @@ export default function LiveMap() {
 
     loadWhiteboard();
   }, []);
+
+  // Initial scroll to content after load
+  useEffect(() => {
+    if (!isLoading && excalidrawAPI && initialData && followMode) {
+      // Delay to ensure Excalidraw is fully rendered
+      const timer = setTimeout(scrollToContent, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, excalidrawAPI, initialData, followMode, scrollToContent]);
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -78,32 +107,52 @@ export default function LiveMap() {
         (payload) => {
           console.log('[LiveMap] Realtime update received');
           const newSceneData = (payload.new as any).scene_data as SceneData;
+          
           if (newSceneData && newSceneData.elements) {
             try {
-              // Update scene with new data
+              // IMPORTANT: Add files FIRST so images are available when elements render
+              if (newSceneData.files && Object.keys(newSceneData.files).length > 0) {
+                console.log('[LiveMap] Adding files:', Object.keys(newSceneData.files).length);
+                excalidrawAPI.addFiles(Object.values(newSceneData.files));
+              }
+
+              // Then update elements
+              console.log('[LiveMap] Updating elements:', newSceneData.elements.length);
               excalidrawAPI.updateScene({
                 elements: newSceneData.elements,
               });
-              
-              // Update files if present
-              if (newSceneData.files && Object.keys(newSceneData.files).length > 0) {
-                excalidrawAPI.addFiles(Object.values(newSceneData.files));
+
+              setLastUpdate(new Date());
+
+              // Auto-scroll to content if follow mode is on
+              if (followMode) {
+                setTimeout(scrollToContent, 100);
               }
             } catch (e) {
-              console.error('[LiveMap] Error loading realtime update:', e);
+              console.error('[LiveMap] Error applying realtime update:', e);
             }
           }
         }
       )
       .subscribe((status) => {
         console.log('[LiveMap] Subscription status:', status);
+        setIsConnected(status === 'SUBSCRIBED');
       });
 
     return () => {
       console.log('[LiveMap] Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [whiteboardId, excalidrawAPI]);
+  }, [whiteboardId, excalidrawAPI, followMode, scrollToContent]);
+
+  // Format last update time
+  const formatLastUpdate = () => {
+    if (!lastUpdate) return null;
+    const diff = Date.now() - lastUpdate.getTime();
+    if (diff < 5000) return 'Az önce';
+    if (diff < 60000) return `${Math.floor(diff / 1000)}s önce`;
+    return `${Math.floor(diff / 60000)}dk önce`;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -118,11 +167,47 @@ export default function LiveMap() {
           </Link>
           <h1 className="text-xl font-bold text-foreground">Canlı Harita</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Canlı
-          </span>
+        
+        <div className="flex items-center gap-4">
+          {/* Follow mode toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFollowMode(!followMode)}
+            className="gap-2"
+          >
+            {followMode ? (
+              <>
+                <Eye className="w-4 h-4" />
+                <span className="hidden sm:inline">Takip Açık</span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="w-4 h-4" />
+                <span className="hidden sm:inline">Takip Kapalı</span>
+              </>
+            )}
+          </Button>
+
+          {/* Connection status */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {isConnected ? (
+              <>
+                <Wifi className="w-4 h-4 text-green-500" />
+                <span className="hidden sm:inline">Bağlı</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4 text-red-500" />
+                <span className="hidden sm:inline">Bağlantı yok</span>
+              </>
+            )}
+            {lastUpdate && (
+              <span className="text-muted-foreground/70">
+                • {formatLastUpdate()}
+              </span>
+            )}
+          </div>
         </div>
       </header>
 

@@ -1,14 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { Excalidraw, convertToExcalidrawElements } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
-import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types';
-import { supabase } from '@/integrations/supabase/client';
+import type { ExcalidrawImperativeAPI, DataURL } from '@excalidraw/excalidraw/types';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Save, Loader2, RotateCcw } from 'lucide-react';
+import { Image as ImageIcon, Save, Loader2, RotateCcw, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { GalleryPickerModal } from '@/components/admin/updates/GalleryPickerModal';
-import { throttle } from 'lodash';
+import { useWhiteboardSync } from '@/hooks/useWhiteboardSync';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,162 +20,29 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface SceneData {
-  elements: any[];
-  appState: Partial<AppState>;
-  files: BinaryFiles;
-}
-
 export default function WhiteboardEditor() {
-  const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
+  const [excalidrawAPI, setExcalidrawAPIState] = useState<ExcalidrawImperativeAPI | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [whiteboardId, setWhiteboardId] = useState<string | null>(null);
-  const [initialData, setInitialData] = useState<SceneData | null>(null);
-  
-  // Refs for stability
-  const isHydratingRef = useRef(true);
-  const saveInFlightRef = useRef(false);
-  const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null);
-  const whiteboardIdRef = useRef<string | null>(null);
 
-  // Keep refs in sync with state
-  useEffect(() => {
-    whiteboardIdRef.current = whiteboardId;
-  }, [whiteboardId]);
+  const {
+    isLoading,
+    isSaving,
+    hasUnsavedChanges,
+    lastSavedAt,
+    initialData,
+    setExcalidrawAPI,
+    handleChange,
+    saveNow,
+    resetWhiteboard,
+  } = useWhiteboardSync({
+    autoSaveDelay: 1200,
+  });
 
-  useEffect(() => {
-    excalidrawAPIRef.current = excalidrawAPI;
-  }, [excalidrawAPI]);
-
-  // Load initial whiteboard data
-  useEffect(() => {
-    const loadWhiteboard = async () => {
-      try {
-        console.log('[WhiteboardEditor] Loading whiteboard...');
-        const { data, error } = await supabase
-          .from('whiteboards')
-          .select('*')
-          .limit(1)
-          .single();
-
-        if (error) {
-          console.error('[WhiteboardEditor] Error loading whiteboard:', error);
-          toast.error('Whiteboard yüklenirken hata oluştu');
-          return;
-        }
-
-        if (data) {
-          console.log('[WhiteboardEditor] Whiteboard loaded:', data.id);
-          setWhiteboardId(data.id);
-          
-          const sceneData = data.scene_data as SceneData | null;
-          if (sceneData && sceneData.elements && sceneData.elements.length > 0) {
-            setInitialData(sceneData);
-          }
-        }
-      } catch (err) {
-        console.error('[WhiteboardEditor] Load error:', err);
-      } finally {
-        setIsLoading(false);
-        // Allow saves after a short delay
-        setTimeout(() => {
-          isHydratingRef.current = false;
-          console.log('[WhiteboardEditor] Hydration complete, autosave enabled');
-        }, 1000);
-      }
-    };
-
-    loadWhiteboard();
-  }, []);
-
-  // Save function using refs to avoid dependency changes
-  const saveWhiteboard = useCallback(async () => {
-    const api = excalidrawAPIRef.current;
-    const currentWhiteboardId = whiteboardIdRef.current;
-
-    if (!api || !currentWhiteboardId) {
-      console.log('[WhiteboardEditor] Save skipped: no API or whiteboardId');
-      return;
-    }
-
-    // Skip if hydrating
-    if (isHydratingRef.current) {
-      console.log('[WhiteboardEditor] Save skipped: hydrating');
-      return;
-    }
-
-    // Skip if already saving
-    if (saveInFlightRef.current) {
-      console.log('[WhiteboardEditor] Save skipped: already in flight');
-      return;
-    }
-
-    saveInFlightRef.current = true;
-    setIsSaving(true);
-    
-    try {
-      const elements = api.getSceneElements();
-      const appState = api.getAppState();
-      const files = api.getFiles();
-
-      console.log('[WhiteboardEditor] Elements to save:', elements.length, elements);
-
-      // Deep clone elements to avoid readonly proxy issues
-      const sceneData: SceneData = {
-        elements: JSON.parse(JSON.stringify(elements)),
-        appState: {
-          viewBackgroundColor: appState.viewBackgroundColor,
-          zoom: appState.zoom,
-          scrollX: appState.scrollX,
-          scrollY: appState.scrollY,
-        },
-        files: JSON.parse(JSON.stringify(files)),
-      };
-
-      console.log('[WhiteboardEditor] Saving scene data...', sceneData);
-      
-      const { error } = await supabase
-        .from('whiteboards')
-        .update({
-          scene_data: sceneData,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', currentWhiteboardId);
-
-      if (error) {
-        console.error('[WhiteboardEditor] Save error:', error);
-        toast.error('Kaydetme hatası');
-      } else {
-        console.log('[WhiteboardEditor] Scene data saved successfully');
-      }
-    } catch (err) {
-      console.error('[WhiteboardEditor] Save error:', err);
-    } finally {
-      saveInFlightRef.current = false;
-      setIsSaving(false);
-    }
-  }, []);
-
-  // Throttled save for onChange
-  const throttledSave = useCallback(
-    throttle(() => {
-      if (!isHydratingRef.current) {
-        saveWhiteboard();
-      }
-    }, 3000),
-    [saveWhiteboard]
-  );
-
-  // Handle scene changes
-  const handleChange = useCallback((
-    elements: readonly any[],
-    appState: AppState,
-    files: BinaryFiles
-  ) => {
-    throttledSave();
-  }, [throttledSave]);
+  // Handle API ref + state together
+  const handleExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
+    setExcalidrawAPIState(api);
+    setExcalidrawAPI(api);
+  }, [setExcalidrawAPI]);
 
   // Helper function to convert URL to data URL
   const urlToDataURL = async (url: string): Promise<DataURL> => {
@@ -200,14 +66,9 @@ export default function WhiteboardEditor() {
     try {
       for (let i = 0; i < urls.length; i++) {
         const url = urls[i];
-        
-        // Convert URL to data URL for Excalidraw
         const dataURL = await urlToDataURL(url);
-        
-        // Generate unique file ID
         const fileId = `gallery_${Date.now()}_${i}`;
         
-        // Add file to Excalidraw
         excalidrawAPI.addFiles([{
           id: fileId as any,
           dataURL,
@@ -215,7 +76,6 @@ export default function WhiteboardEditor() {
           created: Date.now(),
         }]);
 
-        // Create image element using convertToExcalidrawElements
         const viewportCenter = {
           x: window.innerWidth / 2,
           y: window.innerHeight / 2,
@@ -230,12 +90,9 @@ export default function WhiteboardEditor() {
           height: 300,
         }]);
 
-        // Update scene with new element
         excalidrawAPI.updateScene({
           elements: [...excalidrawAPI.getSceneElements(), ...imageElements],
         });
-
-        console.log('[WhiteboardEditor] Image added:', fileId);
       }
 
       toast.success(`${urls.length} resim eklendi`);
@@ -245,43 +102,33 @@ export default function WhiteboardEditor() {
     }
   }, [excalidrawAPI]);
 
-  // Manual save button
+  // Manual save with feedback
   const handleManualSave = async () => {
-    await saveWhiteboard();
-    toast.success('Kaydedildi');
+    const success = await saveNow();
+    if (success) {
+      toast.success('Kaydedildi');
+    } else {
+      toast.error('Kaydetme başarısız');
+    }
   };
 
-  // Reset whiteboard
+  // Reset with feedback
   const handleReset = async () => {
-    if (!whiteboardId || !excalidrawAPI) return;
-
-    try {
-      console.log('[WhiteboardEditor] Resetting whiteboard...');
-      
-      // Clear database
-      const { error } = await supabase
-        .from('whiteboards')
-        .update({
-          scene_data: { elements: [], appState: {}, files: {} },
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', whiteboardId);
-
-      if (error) {
-        console.error('[WhiteboardEditor] Reset error:', error);
-        toast.error('Sıfırlama hatası');
-        return;
-      }
-
-      // Reset Excalidraw
-      excalidrawAPI.resetScene();
-
+    const success = await resetWhiteboard();
+    if (success) {
       toast.success('Harita sıfırlandı');
-      console.log('[WhiteboardEditor] Whiteboard reset complete');
-    } catch (err) {
-      console.error('[WhiteboardEditor] Reset error:', err);
-      toast.error('Sıfırlama sırasında hata');
+    } else {
+      toast.error('Sıfırlama başarısız');
     }
+  };
+
+  // Format last saved time
+  const formatLastSaved = () => {
+    if (!lastSavedAt) return null;
+    const diff = Date.now() - lastSavedAt.getTime();
+    if (diff < 60000) return 'Az önce kaydedildi';
+    const mins = Math.floor(diff / 60000);
+    return `${mins} dk önce kaydedildi`;
   };
 
   return (
@@ -301,15 +148,29 @@ export default function WhiteboardEditor() {
               Galeriden Ekle
             </Button>
           </div>
-          <div className="flex items-center gap-2">
-            {isSaving && (
-              <span className="text-sm text-muted-foreground flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Kaydediliyor...
-              </span>
-            )}
+          
+          <div className="flex items-center gap-3">
+            {/* Save status indicator */}
+            <div className="flex items-center gap-2 text-sm">
+              {isSaving ? (
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Kaydediliyor...
+                </span>
+              ) : hasUnsavedChanges ? (
+                <span className="text-amber-500 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  Kaydedilmemiş değişiklikler
+                </span>
+              ) : lastSavedAt ? (
+                <span className="text-green-500 flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  {formatLastSaved()}
+                </span>
+              ) : null}
+            </div>
             
-            {/* Reset Button with Confirmation */}
+            {/* Reset Button */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
@@ -337,6 +198,7 @@ export default function WhiteboardEditor() {
               </AlertDialogContent>
             </AlertDialog>
 
+            {/* Save Button */}
             <Button
               variant="default"
               size="sm"
@@ -359,7 +221,7 @@ export default function WhiteboardEditor() {
           ) : (
             <div style={{ width: '100%', height: '100%' }}>
               <Excalidraw
-                excalidrawAPI={(api) => setExcalidrawAPI(api)}
+                excalidrawAPI={handleExcalidrawAPI}
                 initialData={initialData ? {
                   elements: initialData.elements,
                   appState: initialData.appState,
