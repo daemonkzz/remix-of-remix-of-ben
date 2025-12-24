@@ -22,12 +22,13 @@ const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
             onClick={onClose}
           />
           
-          {/* Modal */}
+          {/* Modal Container - clicking outside closes */}
           <motion.div
             className="fixed inset-0 z-[101] flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            onClick={onClose}
           >
             <motion.div
               className="relative w-full max-w-md overflow-hidden"
