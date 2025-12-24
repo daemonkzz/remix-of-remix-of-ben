@@ -18,7 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import type { FormQuestion, QuestionType } from '@/types/formBuilder';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { FormQuestion, QuestionType, FormPage } from '@/types/formBuilder';
 
 interface SortableQuestionCardProps {
   question: FormQuestion;
@@ -29,6 +30,7 @@ interface SortableQuestionCardProps {
   onDelete: () => void;
   onDuplicate: () => void;
   onStopEditing: () => void;
+  pages?: FormPage[];
 }
 
 const questionTypeInfo: Record<QuestionType, { label: string; icon: React.ElementType }> = {
@@ -49,6 +51,7 @@ export const SortableQuestionCard = ({
   onDelete,
   onDuplicate,
   onStopEditing,
+  pages = [],
 }: SortableQuestionCardProps) => {
   const {
     attributes,
@@ -89,6 +92,8 @@ export const SortableQuestionCard = ({
       options: question.options.filter((_, i) => i !== optionIndex),
     });
   };
+
+  const currentPage = pages.find((p) => p.id === question.pageId);
 
   return (
     <div
@@ -172,6 +177,30 @@ export const SortableQuestionCard = ({
               className="bg-card border-border"
             />
           </div>
+
+          {/* Page Assignment */}
+          {pages.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-foreground">Sayfa</Label>
+              <Select
+                value={question.pageId || ''}
+                onValueChange={(value) =>
+                  onUpdate({ ...question, pageId: value || undefined })
+                }
+              >
+                <SelectTrigger className="bg-card border-border">
+                  <SelectValue placeholder="Sayfa seçin (opsiyonel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pages.map((page) => (
+                    <SelectItem key={page.id} value={page.id}>
+                      {page.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Placeholder */}
           {(question.type === 'short_text' ||

@@ -19,16 +19,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SortableQuestionCard } from './SortableQuestionCard';
 import { AddQuestionDialog } from './AddQuestionDialog';
-import type { FormQuestion, QuestionType } from '@/types/formBuilder';
+import type { FormQuestion, QuestionType, FormPage } from '@/types/formBuilder';
 
 interface FormBuilderQuestionsProps {
   questions: FormQuestion[];
   setQuestions: (questions: FormQuestion[]) => void;
+  pages: FormPage[];
 }
 
 export const FormBuilderQuestions = ({
   questions,
   setQuestions,
+  pages,
 }: FormBuilderQuestionsProps) => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<FormQuestion | null>(null);
@@ -58,6 +60,7 @@ export const FormBuilderQuestions = ({
       placeholder: '',
       required: false,
       options: type === 'radio' || type === 'checkbox' ? ['Seçenek 1'] : undefined,
+      pageId: pages.length > 0 ? pages[0].id : undefined,
     };
     setQuestions([...questions, newQuestion]);
     setEditingQuestion(newQuestion);
@@ -89,6 +92,35 @@ export const FormBuilderQuestions = ({
     setQuestions(newQuestions);
   };
 
+  // Group questions by page
+  const getQuestionsByPage = () => {
+    if (pages.length === 0) {
+      return [{ page: null, questions }];
+    }
+
+    const grouped: { page: FormPage | null; questions: FormQuestion[] }[] = [];
+    
+    // Add questions for each page
+    pages.forEach((page) => {
+      grouped.push({
+        page,
+        questions: questions.filter((q) => q.pageId === page.id),
+      });
+    });
+
+    // Add unassigned questions
+    const unassigned = questions.filter(
+      (q) => !q.pageId || !pages.find((p) => p.id === q.pageId)
+    );
+    if (unassigned.length > 0) {
+      grouped.push({ page: null, questions: unassigned });
+    }
+
+    return grouped;
+  };
+
+  const groupedQuestions = getQuestionsByPage();
+
   return (
     <div className="space-y-6">
       <Card className="bg-card border-border">
@@ -96,9 +128,10 @@ export const FormBuilderQuestions = ({
           <CardTitle className="text-foreground">Form Soruları</CardTitle>
           <CardDescription>
             Soruları sürükleyerek sırasını değiştirebilirsiniz
+            {pages.length > 0 && ' • Her soruyu bir sayfaya atayabilirsiniz'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           {questions.length === 0 ? (
             <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
               <p className="text-muted-foreground mb-4">Henüz soru eklenmemiş</p>
@@ -117,21 +150,32 @@ export const FormBuilderQuestions = ({
                 items={questions.map((q) => q.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="space-y-3">
-                  {questions.map((question, index) => (
-                    <SortableQuestionCard
-                      key={question.id}
-                      question={question}
-                      index={index}
-                      isEditing={editingQuestion?.id === question.id}
-                      onEdit={() => setEditingQuestion(question)}
-                      onUpdate={handleUpdateQuestion}
-                      onDelete={() => handleDeleteQuestion(question.id)}
-                      onDuplicate={() => handleDuplicateQuestion(question)}
-                      onStopEditing={() => setEditingQuestion(null)}
-                    />
-                  ))}
-                </div>
+                {groupedQuestions.map(({ page, questions: pageQuestions }, groupIndex) => (
+                  <div key={page?.id || 'unassigned'} className="space-y-3">
+                    {pages.length > 0 && (
+                      <div className="flex items-center gap-2 pt-4 first:pt-0">
+                        <span className="text-sm font-medium text-primary">
+                          {page ? page.title : 'Atanmamış Sorular'}
+                        </span>
+                        <div className="flex-1 h-px bg-border/50" />
+                      </div>
+                    )}
+                    {pageQuestions.map((question, index) => (
+                      <SortableQuestionCard
+                        key={question.id}
+                        question={question}
+                        index={index}
+                        isEditing={editingQuestion?.id === question.id}
+                        onEdit={() => setEditingQuestion(question)}
+                        onUpdate={handleUpdateQuestion}
+                        onDelete={() => handleDeleteQuestion(question.id)}
+                        onDuplicate={() => handleDuplicateQuestion(question)}
+                        onStopEditing={() => setEditingQuestion(null)}
+                        pages={pages}
+                      />
+                    ))}
+                  </div>
+                ))}
               </SortableContext>
             </DndContext>
           )}

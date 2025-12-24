@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormBuilderGeneral } from '@/components/admin/FormBuilderGeneral';
 import { FormBuilderQuestions } from '@/components/admin/FormBuilderQuestions';
+import { FormBuilderPages } from '@/components/admin/FormBuilderPages';
 import { FormBuilderSettings } from '@/components/admin/FormBuilderSettings';
 import { FormPreviewModal } from '@/components/admin/FormPreviewModal';
-import type { FormTemplate, FormQuestion, FormSettings } from '@/types/formBuilder';
+import type { FormTemplate, FormQuestion, FormSettings, FormPage, defaultFormSettings } from '@/types/formBuilder';
 
 const FormBuilder = () => {
   const navigate = useNavigate();
@@ -28,11 +29,14 @@ const FormBuilder = () => {
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [questions, setQuestions] = useState<FormQuestion[]>([]);
+  const [pages, setPages] = useState<FormPage[]>([]);
   const [settings, setSettings] = useState<FormSettings>({
     discordWebhookUrl: '',
-    roleRestrictions: [],
+    userAccessTypes: ['verified'],
     cooldownHours: 0,
     maxApplications: 0,
+    accessCodes: [],
+    isPasswordProtected: false,
   });
 
   // Check admin role
@@ -93,14 +97,22 @@ const FormBuilder = () => {
         setDescription(data.description || '');
         setCoverImageUrl(data.cover_image_url || '');
         setIsActive(data.is_active ?? true);
-        setQuestions((data.questions as FormQuestion[]) || []);
         
+        const loadedQuestions = (data.questions as FormQuestion[]) || [];
+        setQuestions(loadedQuestions);
+        
+        // Load pages from settings or create empty array
         const loadedSettings = data.settings as Record<string, unknown> || {};
+        const loadedPages = (loadedSettings.pages as FormPage[]) || [];
+        setPages(loadedPages);
+        
         setSettings({
           discordWebhookUrl: (loadedSettings.discordWebhookUrl as string) || '',
-          roleRestrictions: (loadedSettings.roleRestrictions as string[]) || [],
+          userAccessTypes: (loadedSettings.userAccessTypes as ('unverified' | 'verified')[]) || ['verified'],
           cooldownHours: (loadedSettings.cooldownHours as number) || 0,
           maxApplications: (loadedSettings.maxApplications as number) || 0,
+          accessCodes: (loadedSettings.accessCodes as string[]) || [],
+          isPasswordProtected: (loadedSettings.isPasswordProtected as boolean) || false,
         });
       }
     } catch (error) {
@@ -124,13 +136,19 @@ const FormBuilder = () => {
 
     setIsSaving(true);
     try {
+      // Include pages in settings for storage
+      const settingsWithPages = {
+        ...settings,
+        pages: pages,
+      };
+
       const formData = {
         title: title.trim(),
         description: description.trim(),
         cover_image_url: coverImageUrl.trim() || null,
         is_active: isActive,
         questions: questions,
-        settings: settings,
+        settings: settingsWithPages,
         created_by: user?.id,
       };
 
@@ -184,6 +202,7 @@ const FormBuilder = () => {
     coverImageUrl,
     isActive,
     questions,
+    pages,
     settings,
   };
 
@@ -240,10 +259,11 @@ const FormBuilder = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="general">Genel Bilgiler</TabsTrigger>
-            <TabsTrigger value="questions">Form Soruları</TabsTrigger>
-            <TabsTrigger value="settings">Gelişmiş Ayarlar</TabsTrigger>
+            <TabsTrigger value="pages">Sayfalar</TabsTrigger>
+            <TabsTrigger value="questions">Sorular</TabsTrigger>
+            <TabsTrigger value="settings">Ayarlar</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
@@ -259,10 +279,20 @@ const FormBuilder = () => {
             />
           </TabsContent>
 
+          <TabsContent value="pages">
+            <FormBuilderPages
+              pages={pages}
+              setPages={setPages}
+              questions={questions}
+              setQuestions={setQuestions}
+            />
+          </TabsContent>
+
           <TabsContent value="questions">
             <FormBuilderQuestions
               questions={questions}
               setQuestions={setQuestions}
+              pages={pages}
             />
           </TabsContent>
 

@@ -290,18 +290,33 @@ const Basvuru = () => {
 
   // Get application status for a specific form
   const getApplicationStatus = (formId: string, template: FormTemplate): ApplicationStatus => {
-    // Check if user has existing application
-    const app = userApplications.find(a => a.type === formId);
-    if (app) {
-      return app.status as ApplicationStatus;
+    // Check if user has existing pending application for this form type
+    const pendingApp = userApplications.find(a => a.type === formId && a.status === 'pending');
+    if (pendingApp) {
+      return "pending";
     }
 
-    // Check role restrictions
-    const roleRestrictions = template.settings?.roleRestrictions || [];
+    // Check for approved/rejected status
+    const app = userApplications.find(a => a.type === formId);
+    if (app) {
+      if (app.status === 'approved') return "approved";
+      if (app.status === 'rejected') return "rejected";
+    }
+
+    // Check user access types
+    const userAccessTypes = (template.settings as any)?.userAccessTypes || ['verified'];
     
-    // If form requires 'user' role (approved members only)
-    if (roleRestrictions.includes('user') && !isWhitelistApproved) {
-      return "locked";
+    // Check if user can access based on their verification status
+    if (isWhitelistApproved) {
+      // User is verified, check if form allows verified users
+      if (!userAccessTypes.includes('verified')) {
+        return "locked";
+      }
+    } else {
+      // User is unverified, check if form allows unverified users
+      if (!userAccessTypes.includes('unverified')) {
+        return "locked";
+      }
     }
 
     // Check max applications limit
