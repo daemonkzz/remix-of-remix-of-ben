@@ -22,6 +22,7 @@ import UpdateEditor from "./pages/admin/UpdateEditor";
 import RulesEditor from "./pages/admin/RulesEditor";
 import Gallery from "./pages/admin/Gallery";
 import ManageAccess from "./pages/admin/ManageAccess";
+import NotificationEditor from "./pages/admin/NotificationEditor";
 import Locked from "./pages/admin/Locked";
 import NotFound from "./pages/NotFound";
 import AmbientParticles from "./components/AmbientParticles";
@@ -63,6 +64,7 @@ const App = () => (
                         <Route path="rules-editor" element={<RulesEditor />} />
                         <Route path="gallery" element={<Gallery />} />
                         <Route path="manage-access" element={<ManageAccess />} />
+                        <Route path="notification-editor" element={<NotificationEditor />} />
                         <Route path="locked" element={<Locked />} />
                       </Routes>
                     </AdminRouteGuard>
