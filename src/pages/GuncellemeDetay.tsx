@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ChevronRight, Calendar, Tag, User, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronRight, Calendar, Tag, User, Loader2, X, ZoomIn } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ const GuncellemeDetay = () => {
   const [otherUpdates, setOtherUpdates] = useState<UpdateData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [authorName, setAuthorName] = useState("Yönetici");
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -211,8 +212,14 @@ const GuncellemeDetay = () => {
 
       case "image":
         return (
-          <div className="my-6 rounded-lg overflow-hidden border border-border/30">
-            <img src={block.content as string} alt="" className="w-full" />
+          <div 
+            className="my-6 rounded-lg overflow-hidden border border-border/30 cursor-pointer group relative"
+            onClick={() => setLightboxImage(block.content as string)}
+          >
+            <img src={block.content as string} alt="" className="w-full transition-transform duration-300 group-hover:scale-[1.02]" />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+              <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </div>
           </div>
         );
 
@@ -259,6 +266,35 @@ const GuncellemeDetay = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxImage(null)}
+          >
+            <motion.img
+              src={lightboxImage}
+              alt=""
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            />
+            <button
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              onClick={() => setLightboxImage(null)}
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Hero Image */}
       {update.cover_image_url && (
