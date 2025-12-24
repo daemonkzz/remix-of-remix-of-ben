@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -82,7 +82,27 @@ const Admin = () => {
   const { user, isLoading: authLoading } = useAuth();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('basvurular');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as TabType) || 'basvurular';
+  
+  const setActiveTab = (tab: TabType) => {
+    setSearchParams({ tab });
+  };
+
+  const handleTabClick = (tabId: TabType) => {
+    // Kurallar ve Galeri için direkt sayfaya yönlendir
+    if (tabId === 'kurallar') {
+      navigate('/admin/rules-editor');
+      return;
+    }
+    if (tabId === 'galeri') {
+      navigate('/admin/gallery');
+      return;
+    }
+    
+    // Diğer sekmeler için normal davranış
+    setActiveTab(tabId);
+  };
   const [applications, setApplications] = useState<Application[]>([]);
   const [formTemplates, setFormTemplates] = useState<FormTemplate[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -487,7 +507,7 @@ const Admin = () => {
             {sidebarItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleTabClick(item.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                     activeTab === item.id
                       ? 'bg-primary/10 text-primary border border-primary/20'
