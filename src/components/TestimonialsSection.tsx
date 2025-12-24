@@ -306,8 +306,8 @@ const TestimonialsSection = () => {
           {/* Cards container with conditional centering */}
           <div className={`flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory md:overflow-visible md:pb-0 scrollbar-hide ${
             updateNotes.length < 3 
-              ? 'md:flex md:justify-center md:gap-6' 
-              : 'md:grid md:grid-cols-3 md:gap-6'
+              ? 'md:flex md:justify-center md:gap-8' 
+              : 'md:grid md:grid-cols-3 md:gap-8'
           }`}>
             {updateNotes.length === 0 ? (
               <div className="text-center py-12 w-full">
@@ -318,7 +318,7 @@ const TestimonialsSection = () => {
                 <Link
                   key={note.id}
                   to={`/guncellemeler/${note.id}`}
-                  className="block flex-shrink-0 w-[280px] sm:w-[300px] md:w-[320px] md:flex-shrink-0"
+                  className="block flex-shrink-0 w-[300px] sm:w-[340px] md:w-full md:flex-shrink"
                 >
                   <motion.div
                     className="h-full snap-center bg-[#1a1a1a] rounded-xl md:rounded-2xl overflow-hidden border border-white/[0.06] cursor-pointer group relative"
@@ -344,7 +344,7 @@ const TestimonialsSection = () => {
                     />
                     
                     {/* Image */}
-                    <div className="aspect-[16/10] md:aspect-[4/3] relative overflow-hidden">
+                    <div className="aspect-video relative overflow-hidden">
                       {note.cover_image_url ? (
                         <img
                           src={note.cover_image_url}
