@@ -127,59 +127,76 @@ const HeroSection = () => {
           <motion.div className="max-w-xl" style={{
           y: textY
         }}>
-            <motion.h1 className="font-display text-[180px] text-foreground leading-[0.85] tracking-tight mb-8 italic perspective-1000">
-              <div className="overflow-visible">
-                {"KAZE".split("").map((letter, i) => <motion.span key={`kaze-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
-                scale: 1.1,
-                color: "hsl(var(--primary))",
-                textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
-              }}>
-                    {letter}
-                  </motion.span>)}
-                <motion.span 
-                  key="dash" 
-                  className="inline-block text-primary transition-colors duration-300 hover:text-foreground" 
-                  custom={4} 
-                  variants={letterVariants} 
-                  initial="hidden" 
-                  animate="visible"
-                  whileHover={{
-                    scale: 1.1,
-                    textShadow: "0 0 30px hsl(var(--foreground) / 0.8)"
-                  }}
-                >
-                  -
-                </motion.span>
-                {"Z".split("").map((letter, i) => <motion.span key={`z-${i}`} className="inline-block" custom={i + 5} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
-                scale: 1.1,
-                color: "hsl(var(--primary))",
-                textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
-              }}>
-                    {letter}
-                  </motion.span>)}
-              </div>
-            </motion.h1>
-            <motion.div 
-              className="inline-flex items-center bg-black/50 backdrop-blur-sm rounded-full px-6 py-2 border border-white/10 mt-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.2 }}
-            >
-              <span className="text-lg text-foreground/90 tracking-wide font-sans not-italic">
-                Post-Apokaliptik Roleplay Deneyimi
-              </span>
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.8, delay: 1.5 }}
-            >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="glow" size="lg" className="text-sm px-8 font-medium" onClick={handleApplyClick}>
-                  Başvur <span className="ml-1.5">↗</span>
-                </Button>
+            <div className="space-y-6">
+              <motion.h1 className="font-display text-[180px] text-foreground leading-[0.85] tracking-tight italic perspective-1000">
+                <div className="overflow-visible">
+                  {"KAZE".split("").map((letter, i) => <motion.span key={`kaze-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
+                  scale: 1.1,
+                  color: "hsl(var(--primary))",
+                  textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
+                }}>
+                      {letter}
+                    </motion.span>)}
+                  <motion.span 
+                    key="dash" 
+                    className="inline-block text-primary transition-colors duration-300 hover:text-foreground" 
+                    custom={4} 
+                    variants={letterVariants} 
+                    initial="hidden" 
+                    animate="visible"
+                    whileHover={{
+                      scale: 1.1,
+                      textShadow: "0 0 30px hsl(var(--foreground) / 0.8)"
+                    }}
+                  >
+                    -
+                  </motion.span>
+                  {"Z".split("").map((letter, i) => <motion.span key={`z-${i}`} className="inline-block" custom={i + 5} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
+                  scale: 1.1,
+                  color: "hsl(var(--primary))",
+                  textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
+                }}>
+                      {letter}
+                    </motion.span>)}
+                </div>
+              </motion.h1>
+              
+              {/* Subtitle Badge */}
+              <motion.div 
+                className="relative inline-flex items-center"
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 1.0 }}
+              >
+                <div className="relative">
+                  {/* Glow effect */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent rounded-lg blur-md" />
+                  
+                  {/* Badge content */}
+                  <div className="relative flex items-center gap-3 bg-background/60 backdrop-blur-md border border-primary/30 rounded-lg px-5 py-2.5">
+                    {/* Left accent line */}
+                    <div className="w-1 h-6 bg-gradient-to-b from-primary to-primary/40 rounded-full" />
+                    
+                    <span className="text-base text-foreground/90 tracking-widest uppercase font-medium not-italic">
+                      Post-Apokaliptik Roleplay Deneyimi
+                    </span>
+                  </div>
+                </div>
               </motion.div>
-            </motion.div>
+              
+              {/* Button */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ duration: 0.8, delay: 1.3 }}
+              >
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button variant="glow" size="lg" className="text-sm px-8 font-medium" onClick={handleApplyClick}>
+                    Başvur <span className="ml-1.5">↗</span>
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </div>
           </motion.div>
 
           {/* Right Content - Server Status Card */}
@@ -268,8 +285,8 @@ const HeroSection = () => {
         {/* Mobile Layout */}
         <div className="lg:hidden pb-8 pt-8">
           {/* Title */}
-          <motion.div style={{ y: textY }}>
-            <motion.h1 className="font-display text-[90px] sm:text-[110px] md:text-[140px] text-foreground leading-[0.85] tracking-tight mb-8 italic perspective-1000">
+          <motion.div style={{ y: textY }} className="space-y-4">
+            <motion.h1 className="font-display text-[90px] sm:text-[110px] md:text-[140px] text-foreground leading-[0.85] tracking-tight italic perspective-1000">
               <div className="overflow-visible">
                 {"KAZE".split("").map((letter, i) => <motion.span key={`kaze-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible">
                     {letter}
@@ -289,15 +306,23 @@ const HeroSection = () => {
                   </motion.span>)}
               </div>
             </motion.h1>
+            
+            {/* Subtitle Badge - Mobile */}
             <motion.div 
-              className="inline-flex items-center bg-black/50 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/10 mt-3"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.2 }}
+              className="relative inline-flex items-center"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 1.0 }}
             >
-              <span className="text-sm sm:text-base text-foreground/90 tracking-wide font-sans not-italic">
-                Post-Apokaliptik Roleplay Deneyimi
-              </span>
+              <div className="relative">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent rounded-md blur-sm" />
+                <div className="relative flex items-center gap-2 bg-background/60 backdrop-blur-md border border-primary/30 rounded-md px-3 py-1.5">
+                  <div className="w-0.5 h-4 bg-gradient-to-b from-primary to-primary/40 rounded-full" />
+                  <span className="text-xs sm:text-sm text-foreground/90 tracking-wider uppercase font-medium not-italic">
+                    Post-Apokaliptik Roleplay Deneyimi
+                  </span>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
           
