@@ -302,14 +302,19 @@ const Header = () => {
             )}
           </motion.div>
 
-          {/* Mobile Menu Toggle */}
-          <motion.button
-            className="lg:hidden p-2 text-foreground"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            whileTap={{ scale: 0.9 }}
-          >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </motion.button>
+          {/* Mobile Header - Logo Left, Menu Right */}
+          <div className="flex lg:hidden items-center justify-between w-full">
+            <Link to="/" className="flex items-center">
+              <AnimatedLogo size="sm" />
+            </Link>
+            <motion.button
+              className="p-2 text-foreground"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              whileTap={{ scale: 0.9 }}
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </motion.button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
