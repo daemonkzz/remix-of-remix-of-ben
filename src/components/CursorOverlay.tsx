@@ -51,13 +51,15 @@ const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayP
             const { scale, position } = mapState;
             const { width, height } = containerSize;
             
-            // World to viewport: viewport = (world * scale) + offsetPercent
+            // World to viewport (center-anchored)
+            // Scale transforms around center (50%, 50%), so we need center-relative math
             // position is in pixels, convert to percentage
             const offsetXPercent = (position.x / width) * 100;
             const offsetYPercent = (position.y / height) * 100;
             
-            displayX = (cursor.worldX * scale) + offsetXPercent;
-            displayY = (cursor.worldY * scale) + offsetYPercent;
+            // Center-anchored: displayX = 50 + (worldX - 50) * scale + offset
+            displayX = 50 + (cursor.worldX - 50) * scale + offsetXPercent;
+            displayY = 50 + (cursor.worldY - 50) * scale + offsetYPercent;
           }
           
           // Hide cursors outside viewport with some margin

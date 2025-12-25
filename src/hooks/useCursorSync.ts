@@ -155,14 +155,15 @@ export const useCursorSync = ({
 
       const { scale, position } = mapStateRef.current;
       
-      // Convert viewport coordinates to world coordinates
-      // Viewport to world: world = (viewport - offset) / scale
+      // Convert viewport coordinates to world coordinates (center-anchored)
+      // Scale transforms around center (50%, 50%), so we need center-relative math
       // position is in pixels, convert to percentage of container
       const offsetXPercent = (position.x / containerWidth) * 100;
       const offsetYPercent = (position.y / containerHeight) * 100;
       
-      const worldX = (viewportX - offsetXPercent) / scale;
-      const worldY = (viewportY - offsetYPercent) / scale;
+      // Center-anchored: worldX = 50 + (viewportX - 50 - offset) / scale
+      const worldX = 50 + (viewportX - 50 - offsetXPercent) / scale;
+      const worldY = 50 + (viewportY - 50 - offsetYPercent) / scale;
 
       await channelRef.current.track({
         user_id: user.id,
