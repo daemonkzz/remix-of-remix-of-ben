@@ -12,6 +12,7 @@ import Kurallar from "./pages/Kurallar";
 import Guncellemeler from "./pages/Guncellemeler";
 import GuncellemeDetay from "./pages/GuncellemeDetay";
 import Hikaye from "./pages/Hikaye";
+import GizlilikSozlesmesi from "./pages/GizlilikSozlesmesi";
 import Basvuru from "./pages/Basvuru";
 import BasvuruForm from "./pages/BasvuruForm";
 import BasvuruRevision from "./pages/BasvuruRevision";
@@ -43,6 +44,7 @@ const RouteEffects = () => {
         <Route path="/guncellemeler" element={<Guncellemeler />} />
         <Route path="/guncellemeler/:id" element={<GuncellemeDetay />} />
         <Route path="/hikaye" element={<Hikaye />} />
+        <Route path="/gizlilik-sozlesmesi" element={<GizlilikSozlesmesi />} />
         <Route path="/basvuru" element={<Basvuru />} />
         <Route path="/basvuru/:formId" element={<BasvuruForm />} />
         <Route path="/basvuru/:formId/revision" element={<BasvuruRevision />} />

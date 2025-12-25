@@ -140,9 +140,24 @@ const Footer = () => {
             className="hidden md:block text-right text-[10px] text-foreground/30 leading-relaxed font-light flex-shrink-0 w-[120px]"
             variants={itemVariants}
           >
-            <motion.p whileHover={{ color: "hsl(var(--foreground) / 0.5)" }} className="cursor-pointer">Privacy policy</motion.p>
+            <motion.div whileHover={{ color: "hsl(var(--foreground) / 0.5)" }}>
+              <Link to="/gizlilik-sozlesmesi" className="hover:text-foreground/50 transition-colors">
+                Gizlilik Sözleşmesi
+              </Link>
+            </motion.div>
             <p>Designed by Daemon</p>
             <p>© X Portal 2026</p>
+          </motion.div>
+
+          {/* Mobile - Privacy Policy Link */}
+          <motion.div 
+            className="md:hidden text-center text-[10px] text-foreground/30 leading-relaxed font-light"
+            variants={itemVariants}
+          >
+            <Link to="/gizlilik-sozlesmesi" className="hover:text-foreground/50 transition-colors">
+              Gizlilik Sözleşmesi
+            </Link>
+            <p className="mt-1">© X Portal 2026</p>
           </motion.div>
         </motion.div>
       </div>
