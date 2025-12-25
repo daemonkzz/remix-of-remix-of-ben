@@ -19,7 +19,8 @@ import {
   ToggleRight,
   ShieldCheck,
   Filter,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Map
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +53,7 @@ import { SessionTimeoutIndicator } from '@/components/admin/SessionTimeoutIndica
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 import type { UpdateData } from '@/types/update';
 
-type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'bildirimler' | 'kurallar' | 'galeri' | 'kullanicilar' | 'yetkilendirme';
+type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'bildirimler' | 'kurallar' | 'galeri' | 'canliharita' | 'kullanicilar' | 'yetkilendirme';
 type ApplicationFilterType = 'all' | 'whitelist' | 'other';
 type FormFilterType = 'all' | 'whitelist' | 'other';
 type UpdateFilterType = 'all' | 'update' | 'news';
@@ -91,13 +92,17 @@ const Admin = () => {
   };
 
   const handleTabClick = (tabId: TabType) => {
-    // Kurallar, Galeri, Yetkilendirme ve Bildirimler için direkt sayfaya yönlendir
+    // Kurallar, Galeri, Canlı Harita, Yetkilendirme ve Bildirimler için direkt sayfaya yönlendir
     if (tabId === 'kurallar') {
       navigate('/admin/rules-editor');
       return;
     }
     if (tabId === 'galeri') {
       navigate('/admin/gallery');
+      return;
+    }
+    if (tabId === 'canliharita') {
+      navigate('/admin/whiteboard-editor');
       return;
     }
     if (tabId === 'yetkilendirme') {
@@ -495,6 +500,7 @@ const Admin = () => {
     { id: 'bildirimler' as TabType, label: 'Bildirimler', icon: Bell },
     { id: 'kurallar' as TabType, label: 'Kurallar', icon: Shield },
     { id: 'galeri' as TabType, label: 'Medya Galeri', icon: ImageIcon },
+    { id: 'canliharita' as TabType, label: 'Canlı Harita', icon: Map },
     { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users },
     { id: 'yetkilendirme' as TabType, label: 'Yetki Yönetimi', icon: ShieldCheck },
   ];
