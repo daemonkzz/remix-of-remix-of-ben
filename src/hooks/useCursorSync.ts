@@ -20,6 +20,15 @@ export interface CursorPosition {
   lastUpdate: number;
 }
 
+export interface PingPosition {
+  id: string;
+  worldX: number;
+  worldY: number;
+  user_id: string;
+  color: string;
+  timestamp: number;
+}
+
 // Generate a vibrant border color based on user ID
 const generateUserColor = (userId: string): string => {
   const colors = [
@@ -54,9 +63,11 @@ export const useCursorSync = ({
 }: UseCursorSyncOptions = {}) => {
   const { user, profile } = useAuth();
   const [cursors, setCursors] = useState<Map<string, CursorPosition>>(new Map());
+  const [pings, setPings] = useState<PingPosition[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const mapStateRef = useRef(mapState);
+  const lastPingTimeRef = useRef<number>(0);
   const myColor = user ? generateUserColor(user.id) : '#fff';
 
   // Keep mapState ref updated
@@ -64,12 +75,14 @@ export const useCursorSync = ({
     mapStateRef.current = mapState;
   }, [mapState]);
 
-  // Cleanup stale cursors (inactive for more than 3 seconds)
+  // Cleanup stale cursors and pings
   useEffect(() => {
     if (!isActive) return;
 
     const interval = setInterval(() => {
       const now = Date.now();
+      
+      // Clean stale cursors (3s)
       setCursors(prev => {
         const updated = new Map(prev);
         let hasChanges = false;
@@ -83,7 +96,13 @@ export const useCursorSync = ({
         
         return hasChanges ? updated : prev;
       });
-    }, 1000);
+
+      // Clean old pings (3s)
+      setPings(prev => {
+        const filtered = prev.filter(p => now - p.timestamp < 3000);
+        return filtered.length !== prev.length ? filtered : prev;
+      });
+    }, 500);
 
     return () => clearInterval(interval);
   }, [isActive]);
@@ -91,6 +110,7 @@ export const useCursorSync = ({
   useEffect(() => {
     if (!user || !isActive) {
       setCursors(new Map());
+      setPings([]);
       setIsConnected(false);
       return;
     }
@@ -99,6 +119,9 @@ export const useCursorSync = ({
       config: {
         presence: {
           key: user.id,
+        },
+        broadcast: {
+          self: false,
         },
       },
     });
@@ -134,6 +157,27 @@ export const useCursorSync = ({
         });
 
         setCursors(newCursors);
+      })
+      .on('broadcast', { event: 'ping' }, ({ payload }) => {
+        if (payload && typeof payload.worldX === 'number') {
+          const pingData: PingPosition = {
+            id: `${payload.user_id}-${payload.timestamp}`,
+            worldX: payload.worldX,
+            worldY: payload.worldY,
+            user_id: payload.user_id,
+            color: generateUserColor(payload.user_id),
+            timestamp: payload.timestamp,
+          };
+          
+          setPings(prev => {
+            // Limit to 5 active pings, remove oldest if needed
+            const updated = [...prev, pingData];
+            if (updated.length > 5) {
+              return updated.slice(-5);
+            }
+            return updated;
+          });
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -175,6 +219,51 @@ export const useCursorSync = ({
     }, 50),
     [user, profile, isActive]
   );
+
+  // Send ping at world coordinates
+  const sendPing = useCallback((worldX: number, worldY: number) => {
+    if (!channelRef.current || !user || !isActive) return false;
+
+    const now = Date.now();
+    // Cooldown: 2 seconds between pings
+    if (now - lastPingTimeRef.current < 2000) {
+      return false;
+    }
+
+    lastPingTimeRef.current = now;
+
+    // Broadcast ping to all users
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'ping',
+      payload: {
+        worldX,
+        worldY,
+        user_id: user.id,
+        timestamp: now,
+      },
+    });
+
+    // Also add to own pings for immediate feedback
+    const pingData: PingPosition = {
+      id: `${user.id}-${now}`,
+      worldX,
+      worldY,
+      user_id: user.id,
+      color: myColor,
+      timestamp: now,
+    };
+    
+    setPings(prev => {
+      const updated = [...prev, pingData];
+      if (updated.length > 5) {
+        return updated.slice(-5);
+      }
+      return updated;
+    });
+
+    return true;
+  }, [user, isActive, myColor]);
 
   // Handle mouse move on container
   const handleMouseMove = useCallback((
@@ -225,10 +314,12 @@ export const useCursorSync = ({
 
   return {
     cursors: Array.from(cursors.values()),
+    pings,
     isConnected,
     handleMouseMove,
     handleTouchMove,
     handleMouseLeave,
+    sendPing,
     myColor,
     currentUserId: user?.id,
   };

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Map, BookOpen, Info, ChevronUp, Sparkles, Maximize2, RefreshCw, Loader2, X, Wifi, WifiOff, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { Map, BookOpen, Info, ChevronUp, Sparkles, Maximize2, RefreshCw, Loader2, X, Wifi, WifiOff, ZoomIn, ZoomOut, RotateCcw, BellOff, Bell } from "lucide-react";
 import {
   HoverCard,
   HoverCardContent,
@@ -13,6 +13,7 @@ import { useWhiteboardViewer } from "@/hooks/useWhiteboardViewer";
 import { useAuth } from "@/contexts/AuthContext";
 import OnlineUsersBar from "@/components/OnlineUsersBar";
 import CursorOverlay from "@/components/CursorOverlay";
+import PingOverlay from "@/components/PingOverlay";
 import { useCursorSync } from "@/hooks/useCursorSync";
 
 const storyContent = [
@@ -97,17 +98,80 @@ const Hikaye = () => {
   // Map state for cursor sync
   const mapStateForCursor = { scale, position };
 
+  // Ping visibility state
+  const [showPings, setShowPings] = useState(true);
+  
+  // Long press for mobile ping
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
+
   // Cursor sync hook - only active when on hikaye-tablosu tab
   const {
     cursors,
+    pings,
     isConnected: isCursorSyncConnected,
     handleMouseMove: handleCursorMove,
     handleTouchMove: handleCursorTouchMove,
     handleMouseLeave: handleCursorLeave,
+    sendPing,
   } = useCursorSync({
     isActive: activeTab === "hikaye-tablosu" && !!user,
     mapState: mapStateForCursor,
   });
+
+  // Convert viewport coordinates to world coordinates for ping
+  const viewportToWorld = useCallback((viewportX: number, viewportY: number, containerWidth: number, containerHeight: number) => {
+    const offsetXPercent = (position.x / containerWidth) * 100;
+    const offsetYPercent = (position.y / containerHeight) * 100;
+    
+    const worldX = 50 + (viewportX - 50 - offsetXPercent) / scale;
+    const worldY = 50 + (viewportY - 50 - offsetYPercent) / scale;
+    
+    return { worldX, worldY };
+  }, [position, scale]);
+
+  // Handle double click for ping (desktop)
+  const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>, containerRef: React.RefObject<HTMLDivElement>) => {
+    if (!containerRef.current || !user) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const viewportX = ((e.clientX - rect.left) / rect.width) * 100;
+    const viewportY = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    const { worldX, worldY } = viewportToWorld(viewportX, viewportY, rect.width, rect.height);
+    sendPing(worldX, worldY);
+  }, [user, viewportToWorld, sendPing]);
+
+  // Handle long press start for ping (mobile)
+  const handleLongPressStart = useCallback((e: React.TouchEvent<HTMLDivElement>, containerRef: React.RefObject<HTMLDivElement>) => {
+    if (e.touches.length !== 1 || !containerRef.current || !user) return;
+    
+    const touch = e.touches[0];
+    const rect = containerRef.current.getBoundingClientRect();
+    
+    longPressStartRef.current = { x: touch.clientX, y: touch.clientY };
+    
+    longPressTimerRef.current = setTimeout(() => {
+      if (!longPressStartRef.current || !containerRef.current) return;
+      
+      const viewportX = ((longPressStartRef.current.x - rect.left) / rect.width) * 100;
+      const viewportY = ((longPressStartRef.current.y - rect.top) / rect.height) * 100;
+      
+      const { worldX, worldY } = viewportToWorld(viewportX, viewportY, rect.width, rect.height);
+      sendPing(worldX, worldY);
+      
+      longPressStartRef.current = null;
+    }, 500);
+  }, [user, viewportToWorld, sendPing]);
+
+  // Cancel long press if moved or ended early
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartRef.current = null;
+  }, []);
   
   const scrollLockRef = useRef<null | {
     scrollY: number;
@@ -454,6 +518,16 @@ const Hikaye = () => {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={() => setShowPings(!showPings)}
+                className="w-9 h-9 bg-background/60 backdrop-blur-sm border border-border/30 hover:bg-background/80"
+                title={showPings ? "Pingleri gizle" : "Pingleri göster"}
+              >
+                {showPings ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setIsFullscreen(false)}
                 className="w-9 h-9 bg-background/60 backdrop-blur-sm border border-border/30 hover:bg-background/80"
               >
@@ -505,16 +579,30 @@ const Hikaye = () => {
               onMouseLeave={(e) => {
                 handleMouseUp();
                 handleCursorLeave();
+                cancelLongPress();
               }}
-              onTouchStart={handleTouchStart}
+              onDoubleClick={(e) => handleDoubleClick(e, fullscreenContainerRef)}
+              onTouchStart={(e) => {
+                handleTouchStart(e);
+                handleLongPressStart(e, fullscreenContainerRef);
+              }}
               onTouchMove={(e) => {
                 handleTouchMove(e);
                 handleCursorTouchMove(e, fullscreenContainerRef);
+                cancelLongPress();
               }}
-              onTouchEnd={handleTouchEnd}
+              onTouchEnd={() => {
+                handleTouchEnd();
+                cancelLongPress();
+              }}
             >
               {/* Cursor Overlay */}
               <CursorOverlay cursors={cursors} mapState={mapStateForCursor} containerSize={containerSize} />
+              
+              {/* Ping Overlay */}
+              {showPings && (
+                <PingOverlay pings={pings} mapState={mapStateForCursor} containerSize={containerSize} />
+              )}
 
               <div
                 className="absolute inset-0 flex items-center justify-center will-change-transform"
@@ -837,16 +925,31 @@ const Hikaye = () => {
                   onMouseLeave={(e) => {
                     handleMouseUp();
                     handleCursorLeave();
+                    cancelLongPress();
                   }}
-                  onTouchStart={handleTouchStart}
+                  onDoubleClick={(e) => handleDoubleClick(e, mapContainerRef)}
+                  onTouchStart={(e) => {
+                    handleTouchStart(e);
+                    handleLongPressStart(e, mapContainerRef);
+                  }}
                   onTouchMove={(e) => {
                     handleTouchMove(e);
                     handleCursorTouchMove(e, mapContainerRef);
+                    cancelLongPress();
                   }}
-                  onTouchEnd={handleTouchEnd}
+                  onTouchEnd={() => {
+                    handleTouchEnd();
+                    cancelLongPress();
+                  }}
                 >
                   {/* Cursor Overlay */}
                   <CursorOverlay cursors={cursors} mapState={mapStateForCursor} containerSize={containerSize} />
+                  
+                  {/* Ping Overlay */}
+                  {showPings && (
+                    <PingOverlay pings={pings} mapState={mapStateForCursor} containerSize={containerSize} />
+                  )}
+                  
                   {/* Online Users Bar - Absolute overlay, no layout shift */}
                   <AnimatePresence>
                     {user && (
@@ -924,6 +1027,16 @@ const Hikaye = () => {
                       className="w-8 h-8 bg-background/60 backdrop-blur-sm border border-border/30 hover:bg-background/80"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowPings(!showPings)}
+                      className="w-8 h-8 bg-background/60 backdrop-blur-sm border border-border/30 hover:bg-background/80"
+                      title={showPings ? "Pingleri gizle" : "Pingleri göster"}
+                    >
+                      {showPings ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
                     </Button>
 
                     <Button
