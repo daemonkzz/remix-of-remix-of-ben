@@ -19,20 +19,18 @@ export const useOnlineUsers = (channelName: string = 'online-hikaye-users') => {
   const lastStableUsersRef = useRef<OnlineUser[]>([]);
 
   useEffect(() => {
-    if (!user) {
-      setOnlineUsers([]);
-      setIsConnected(false);
-      lastStableUsersRef.current = [];
-      return;
+    const channelConfig: any = {
+      config: {},
+    };
+
+    // Only set presence key if user is authenticated
+    if (user) {
+      channelConfig.config.presence = {
+        key: user.id,
+      };
     }
 
-    const channel = supabase.channel(channelName, {
-      config: {
-        presence: {
-          key: user.id,
-        },
-      },
-    });
+    const channel = supabase.channel(channelName, channelConfig);
 
     const updateUsers = (users: OnlineUser[]) => {
       // Sort deterministically by user_id to prevent layout jumps
@@ -85,12 +83,15 @@ export const useOnlineUsers = (channelName: string = 'online-hikaye-users') => {
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
-          await channel.track({
-            user_id: user.id,
-            username: profile?.username || null,
-            avatar_url: profile?.avatar_url || null,
-            online_at: new Date().toISOString(),
-          });
+          // Only track presence if user is authenticated
+          if (user) {
+            await channel.track({
+              user_id: user.id,
+              username: profile?.username || null,
+              avatar_url: profile?.avatar_url || null,
+              online_at: new Date().toISOString(),
+            });
+          }
         }
       });
 

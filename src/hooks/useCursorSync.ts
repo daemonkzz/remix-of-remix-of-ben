@@ -101,23 +101,30 @@ export const useCursorSync = ({
   }, [isActive]);
 
   useEffect(() => {
-    if (!user || !isActive) {
+    // Allow non-authenticated users to listen (but not send)
+    if (!isActive) {
       setCursors(new Map());
       setPings([]);
       setIsConnected(false);
       return;
     }
 
-    const channel = supabase.channel(channelName, {
+    const channelConfig: any = {
       config: {
-        presence: {
-          key: user.id,
-        },
         broadcast: {
           self: false,
         },
       },
-    });
+    };
+
+    // Only set presence key if user is authenticated
+    if (user) {
+      channelConfig.config.presence = {
+        key: user.id,
+      };
+    }
+
+    const channel = supabase.channel(channelName, channelConfig);
 
     channelRef.current = channel;
 
@@ -127,7 +134,7 @@ export const useCursorSync = ({
         const newCursors = new Map<string, CursorPosition>();
 
         Object.keys(state).forEach((key) => {
-          if (key === user.id) return; // Skip own cursor
+          if (user && key === user.id) return; // Skip own cursor if logged in
           
           const presences = state[key] as unknown as any[];
           if (presences && presences.length > 0) {
