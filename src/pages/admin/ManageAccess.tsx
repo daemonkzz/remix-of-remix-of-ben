@@ -96,7 +96,7 @@ const ManageAccessContent: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (settingsError) {
-        console.error('Error fetching admin list:', settingsError);
+        if (import.meta.env.DEV) console.error('Error fetching admin list:', settingsError);
         toast.error('Yetki listesi yüklenirken hata oluştu');
         return;
       }
@@ -114,7 +114,7 @@ const ManageAccessContent: React.FC = () => {
         .in('id', userIds);
 
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
+        if (import.meta.env.DEV) console.error('Error fetching profiles:', profilesError);
       }
 
       // Merge data
@@ -129,7 +129,7 @@ const ManageAccessContent: React.FC = () => {
 
       setAdminList(list);
     } catch (error) {
-      console.error('Error fetching admin list:', error);
+      if (import.meta.env.DEV) console.error('Error fetching admin list:', error);
       toast.error('Yetki listesi yüklenirken hata oluştu');
     } finally {
       setIsLoadingList(false);
@@ -139,6 +139,13 @@ const ManageAccessContent: React.FC = () => {
   useEffect(() => {
     fetchAdminList();
   }, [fetchAdminList]);
+
+  // Sanitize search input to prevent SQL injection
+  const sanitizeSearchInput = (input: string): string => {
+    // Remove special characters that could be used for SQL injection
+    // Allow only alphanumeric, spaces, underscores, and hyphens
+    return input.replace(/[^a-zA-Z0-9\s_\-]/g, '').substring(0, 100);
+  };
 
   // Search user
   const handleSearch = async () => {
@@ -152,18 +159,61 @@ const ManageAccessContent: React.FC = () => {
     setSearchError(null);
 
     try {
-      const query = searchQuery.trim();
+      const rawQuery = searchQuery.trim();
+      const sanitizedQuery = sanitizeSearchInput(rawQuery);
       
-      // Search by username, discord_id, or steam_id
-      const { data, error } = await supabase
+      if (!sanitizedQuery) {
+        setSearchError('Geçersiz arama sorgusu');
+        setIsSearching(false);
+        return;
+      }
+      
+      // Use separate filter calls instead of string interpolation to prevent SQL injection
+      // First try exact match on discord_id or steam_id
+      let data = null;
+      let error = null;
+
+      // Try username search with ilike
+      const usernameResult = await supabase
         .from('profiles')
         .select('id, username, avatar_url, discord_id, steam_id')
-        .or(`username.ilike.%${query}%,discord_id.eq.${query},steam_id.eq.${query}`)
+        .ilike('username', `%${sanitizedQuery}%`)
         .limit(1)
         .maybeSingle();
+      
+      if (usernameResult.data) {
+        data = usernameResult.data;
+      } else if (!usernameResult.error) {
+        // Try exact match on discord_id
+        const discordResult = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url, discord_id, steam_id')
+          .eq('discord_id', sanitizedQuery)
+          .limit(1)
+          .maybeSingle();
+        
+        if (discordResult.data) {
+          data = discordResult.data;
+        } else if (!discordResult.error) {
+          // Try exact match on steam_id
+          const steamResult = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url, discord_id, steam_id')
+            .eq('steam_id', sanitizedQuery)
+            .limit(1)
+            .maybeSingle();
+          
+          data = steamResult.data;
+          error = steamResult.error;
+        } else {
+          error = discordResult.error;
+        }
+      } else {
+        error = usernameResult.error;
+      }
 
       if (error) {
-        console.error('Search error:', error);
+        if (import.meta.env.DEV) console.error('Search error:', error);
         setSearchError('Arama yapılırken hata oluştu');
         return;
       }
@@ -182,7 +232,7 @@ const ManageAccessContent: React.FC = () => {
 
       setSearchResult(data);
     } catch (error) {
-      console.error('Search error:', error);
+      if (import.meta.env.DEV) console.error('Search error:', error);
       setSearchError('Arama yapılırken hata oluştu');
     } finally {
       setIsSearching(false);
@@ -204,7 +254,7 @@ const ManageAccessContent: React.FC = () => {
       if (roleError) {
         // Eğer zaten varsa (unique constraint) devam et
         if (!roleError.message.includes('duplicate')) {
-          console.error('Add role error:', roleError);
+          if (import.meta.env.DEV) console.error('Add role error:', roleError);
           toast.error('Admin rolü eklenirken hata oluştu');
           setAddingUserId(null);
           return;
@@ -222,7 +272,7 @@ const ManageAccessContent: React.FC = () => {
         });
 
       if (error) {
-        console.error('Add user error:', error);
+        if (import.meta.env.DEV) console.error('Add user error:', error);
         toast.error('Kullanıcı eklenirken hata oluştu');
         return;
       }
@@ -232,7 +282,7 @@ const ManageAccessContent: React.FC = () => {
       setSearchQuery('');
       fetchAdminList();
     } catch (error) {
-      console.error('Add user error:', error);
+      if (import.meta.env.DEV) console.error('Add user error:', error);
       toast.error('Kullanıcı eklenirken hata oluştu');
     } finally {
       setAddingUserId(null);
@@ -251,7 +301,7 @@ const ManageAccessContent: React.FC = () => {
         .eq('user_id', removingUserId);
 
       if (error) {
-        console.error('Remove user error:', error);
+        if (import.meta.env.DEV) console.error('Remove user error:', error);
         toast.error('Kullanıcı silinirken hata oluştu');
         return;
       }
@@ -264,14 +314,14 @@ const ManageAccessContent: React.FC = () => {
         .eq('role', 'admin');
 
       if (roleError) {
-        console.error('Remove role error:', roleError);
+        if (import.meta.env.DEV) console.error('Remove role error:', roleError);
         // Ama kullanıcı 2fa_settings'den silindiği için hata gösterme
       }
 
       toast.success('Kullanıcı yetki listesinden kaldırıldı');
       fetchAdminList();
     } catch (error) {
-      console.error('Remove user error:', error);
+      if (import.meta.env.DEV) console.error('Remove user error:', error);
       toast.error('Kullanıcı silinirken hata oluştu');
     } finally {
       setRemovingUserId(null);
@@ -319,7 +369,7 @@ const ManageAccessContent: React.FC = () => {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Provision error:', error);
+        if (import.meta.env.DEV) console.error('Provision error:', error);
         toast.error('2FA kurulumu yapılırken hata oluştu');
         return;
       }
@@ -332,7 +382,7 @@ const ManageAccessContent: React.FC = () => {
       toast.success('2FA kurulumu tamamlandı');
       fetchAdminList();
     } catch (error) {
-      console.error('Provision error:', error);
+      if (import.meta.env.DEV) console.error('Provision error:', error);
       toast.error('2FA kurulumu yapılırken hata oluştu');
     } finally {
       setProvisioningUserId(null);
@@ -354,7 +404,7 @@ const ManageAccessContent: React.FC = () => {
         .eq('user_id', unblockingUserId);
 
       if (error) {
-        console.error('Unblock error:', error);
+        if (import.meta.env.DEV) console.error('Unblock error:', error);
         toast.error('Blokaj kaldırılırken hata oluştu');
         return;
       }
@@ -362,7 +412,7 @@ const ManageAccessContent: React.FC = () => {
       toast.success('Kullanıcı blokajı kaldırıldı');
       fetchAdminList();
     } catch (error) {
-      console.error('Unblock error:', error);
+      if (import.meta.env.DEV) console.error('Unblock error:', error);
       toast.error('Blokaj kaldırılırken hata oluştu');
     } finally {
       setUnblockingUserId(null);

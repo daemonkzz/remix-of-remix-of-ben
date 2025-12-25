@@ -42,10 +42,23 @@ const NotificationEditorContent = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
+  // Sanitize search input to prevent SQL injection
+  const sanitizeSearchInput = (input: string): string => {
+    // Remove special characters that could be used for SQL injection
+    // Allow only alphanumeric, spaces, underscores, and hyphens
+    return input.replace(/[^a-zA-Z0-9\s_\-]/g, '').substring(0, 100);
+  };
+
   // Search users
   useEffect(() => {
     const searchUsers = async () => {
       if (!searchQuery.trim() || targetType !== 'selected') {
+        setSearchResults([]);
+        return;
+      }
+
+      const sanitizedQuery = sanitizeSearchInput(searchQuery.trim());
+      if (!sanitizedQuery) {
         setSearchResults([]);
         return;
       }
@@ -55,7 +68,7 @@ const NotificationEditorContent = () => {
         const { data, error } = await supabase
           .from('profiles')
           .select('id, username, avatar_url')
-          .ilike('username', `%${searchQuery}%`)
+          .ilike('username', `%${sanitizedQuery}%`)
           .limit(10);
 
         if (error) throw error;
@@ -66,7 +79,7 @@ const NotificationEditorContent = () => {
         );
         setSearchResults(filtered);
       } catch (error) {
-        console.error('Search error:', error);
+        if (import.meta.env.DEV) console.error('Search error:', error);
       } finally {
         setIsSearching(false);
       }
@@ -138,7 +151,7 @@ const NotificationEditorContent = () => {
       );
       navigate('/admin?tab=guncellemeler');
     } catch (error) {
-      console.error('Send error:', error);
+      if (import.meta.env.DEV) console.error('Send error:', error);
       toast.error('Bildirim gönderilirken hata oluştu');
     } finally {
       setIsSending(false);

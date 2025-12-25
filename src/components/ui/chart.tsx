@@ -65,17 +65,27 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // Validate id to ensure it only contains safe characters for CSS selectors
+  const sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!sanitizedId) {
+    return null;
+  }
+
   return (
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(
             ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+${prefix} [data-chart=${sanitizedId}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
+    // Sanitize key and color values
+    const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '');
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    // Validate color is a valid CSS color format (hex, rgb, hsl, or named color)
+    const isValidColor = color && /^(#[0-9A-Fa-f]{3,8}|rgb\(|rgba\(|hsl\(|hsla\(|[a-zA-Z]+)/.test(color);
+    return isValidColor ? `  --color-${safeKey}: ${color};` : null;
   })
   .join("\n")}
 }
