@@ -1,28 +1,47 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
-// Güvenli CORS yapılandırması - Lovable domain'lerine izin ver
+// Güvenli CORS yapılandırması - Lovable ve Kaze-Z domain'lerine izin ver
 const getAllowedOrigin = (requestOrigin: string | null): string => {
   const allowedOrigins = [
     'https://bbuatycybtwblwyychag.supabase.co',
     'http://localhost:5173',
     'http://localhost:8080',
+    'https://kaze-zrp.com',
+    'https://www.kaze-zrp.com',
   ];
   
   // Tam eşleşme kontrolü
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    console.log(`CORS: Exact match for origin: ${requestOrigin}`);
     return requestOrigin;
   }
   
   // Lovable app URL'lerini dinamik olarak kabul et (*.lovable.app)
   if (requestOrigin && requestOrigin.endsWith('.lovable.app')) {
+    console.log(`CORS: Lovable app match for origin: ${requestOrigin}`);
     return requestOrigin;
   }
   
   // Lovable preview URL'lerini dinamik olarak kabul et (*.lovableproject.com)
   if (requestOrigin && requestOrigin.endsWith('.lovableproject.com')) {
+    console.log(`CORS: Lovable project match for origin: ${requestOrigin}`);
     return requestOrigin;
   }
   
+  // Kaze-Z subdomain'lerini kabul et (*.kaze-zrp.com)
+  if (requestOrigin) {
+    try {
+      const url = new URL(requestOrigin);
+      if (url.hostname === 'kaze-zrp.com' || url.hostname.endsWith('.kaze-zrp.com')) {
+        console.log(`CORS: Kaze-Z domain match for origin: ${requestOrigin}`);
+        return requestOrigin;
+      }
+    } catch {
+      // Invalid URL, ignore
+    }
+  }
+  
+  console.warn(`CORS: No match for origin: ${requestOrigin}, falling back to default`);
   // Fallback
   return allowedOrigins[0];
 };
