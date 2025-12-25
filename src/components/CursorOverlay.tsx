@@ -38,7 +38,36 @@ const CursorIcon = ({ borderColor, odometer }: { borderColor: string; odometer: 
   );
 };
 
+// Zoom-based scaling constants
+const MIN_VISIBLE_SCALE = 0.35; // Hide cursor completely below this zoom
+const LOW_OPACITY_SCALE = 0.5;  // Start reducing opacity below this
+const NORMAL_SCALE = 1.0;       // Reference scale (100% zoom)
+const MAX_CURSOR_SCALE = 1.5;   // Maximum cursor size multiplier
+const MIN_CURSOR_SCALE = 0.5;   // Minimum cursor size multiplier
+
 const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayProps) => {
+  // Calculate cursor scale and opacity based on map zoom
+  const zoomScale = mapState?.scale ?? 1;
+  
+  // Don't render anything if zoom is too low
+  if (zoomScale < MIN_VISIBLE_SCALE) {
+    return null;
+  }
+  
+  // Calculate cursor scale: inversely proportional to zoom
+  // At 100% zoom (scale=1), cursor is normal size
+  // At 50% zoom (scale=0.5), cursor is smaller
+  // At 200% zoom (scale=2), cursor is larger but capped
+  const cursorScale = Math.min(
+    MAX_CURSOR_SCALE,
+    Math.max(MIN_CURSOR_SCALE, zoomScale)
+  );
+  
+  // Calculate opacity: fade out at low zoom levels
+  const cursorOpacity = zoomScale < LOW_OPACITY_SCALE
+    ? (zoomScale - MIN_VISIBLE_SCALE) / (LOW_OPACITY_SCALE - MIN_VISIBLE_SCALE)
+    : 1;
+
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
       <AnimatePresence>
@@ -52,12 +81,9 @@ const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayP
             const { width, height } = containerSize;
             
             // World to viewport (center-anchored)
-            // Scale transforms around center (50%, 50%), so we need center-relative math
-            // position is in pixels, convert to percentage
             const offsetXPercent = (position.x / width) * 100;
             const offsetYPercent = (position.y / height) * 100;
             
-            // Center-anchored: displayX = 50 + (worldX - 50) * scale + offset
             displayX = 50 + (cursor.worldX - 50) * scale + offsetXPercent;
             displayY = 50 + (cursor.worldY - 50) * scale + offsetYPercent;
           }
@@ -72,19 +98,19 @@ const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayP
               key={cursor.user_id}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ 
-                opacity: 1, 
-                scale: 1,
+                opacity: cursorOpacity, 
+                scale: cursorScale,
                 left: `${displayX}%`,
                 top: `${displayY}%`,
               }}
               exit={{ opacity: 0, scale: 0.5 }}
               transition={{
                 opacity: { duration: 0.2 },
-                scale: { duration: 0.2 },
+                scale: { duration: 0.15, ease: 'easeOut' },
                 left: { duration: 0.1, ease: 'linear' },
                 top: { duration: 0.1, ease: 'linear' },
               }}
-              className="absolute"
+              className="absolute origin-top-left"
               style={{
                 transform: 'translate(-3px, -3px)',
               }}
@@ -92,7 +118,7 @@ const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayP
               {/* Cursor icon */}
               <CursorIcon borderColor={cursor.color} odometer={index} />
               
-              {/* Minimalist username label */}
+              {/* Minimalist username label - scales with cursor */}
               <div 
                 className="absolute left-4 top-4 whitespace-nowrap px-1.5 py-0.5 
                            rounded text-[10px] font-medium text-white/80 
@@ -110,7 +136,6 @@ const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayP
     </div>
   );
 });
-
 CursorOverlay.displayName = 'CursorOverlay';
 
 export default CursorOverlay;
