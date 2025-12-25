@@ -126,14 +126,12 @@ const Footer = () => {
               </Link>
             </motion.div>
             <motion.div whileHover={{ y: -2 }}>
-              <a 
-                href="https://whimsical.com/xportal-harita-JPbRsfz8r5hto2huL7HmBk"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button 
+                type="button"
                 className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
               >
                 Harita
-              </a>
+              </button>
             </motion.div>
           </motion.div>
 
