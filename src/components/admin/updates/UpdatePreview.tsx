@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
 import { Calendar, Tag, User } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type { UpdateData, ContentBlock } from '@/types/update';
 
 interface UpdatePreviewProps {
@@ -24,14 +24,33 @@ export const UpdatePreview = ({ data, authorName = 'Yönetici' }: UpdatePreviewP
   };
 
   const renderFormattedText = (text: string) => {
+    // Escape HTML entities first to prevent XSS
+    const escapeHtml = (str: string) => {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+    
+    // Escape HTML first, then apply markdown transformations
+    let formatted = escapeHtml(text);
+    
     // Handle bold (**text**)
-    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     // Handle italic (*text*)
     formatted = formatted.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '<em>$1</em>');
     // Handle inline code (`text`)
     formatted = formatted.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">$1</code>');
     
-    return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
+    // Sanitize the final output with DOMPurify
+    const sanitized = DOMPurify.sanitize(formatted, {
+      ALLOWED_TAGS: ['strong', 'em', 'code'],
+      ALLOWED_ATTR: ['class'],
+    });
+    
+    return <span dangerouslySetInnerHTML={{ __html: sanitized }} />;
   };
 
   const renderBlock = (block: ContentBlock) => {

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Calendar, Tag, User, Loader2, X, ZoomIn } from "lucide-react";
+import DOMPurify from "dompurify";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -160,13 +161,33 @@ const GuncellemeDetay = () => {
   };
 
   const renderFormattedText = (text: string) => {
-    let formatted = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    // Escape HTML entities first to prevent XSS
+    const escapeHtml = (str: string) => {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+    
+    // Escape HTML first, then apply markdown transformations
+    let formatted = escapeHtml(text);
+    
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     formatted = formatted.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, "<em>$1</em>");
     formatted = formatted.replace(
       /`([^`]+)`/g,
       '<code class="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">$1</code>'
     );
-    return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
+    
+    // Sanitize the final output with DOMPurify
+    const sanitized = DOMPurify.sanitize(formatted, {
+      ALLOWED_TAGS: ["strong", "em", "code"],
+      ALLOWED_ATTR: ["class"],
+    });
+    
+    return <span dangerouslySetInnerHTML={{ __html: sanitized }} />;
   };
 
   const renderBlock = (block: ContentBlock) => {
