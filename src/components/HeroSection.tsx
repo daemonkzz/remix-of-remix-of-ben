@@ -130,10 +130,10 @@ const HeroSection = () => {
             <div className="space-y-6">
               <motion.h1 className="font-display text-[180px] text-foreground leading-[0.85] tracking-tight italic perspective-1000">
                 <div className="overflow-visible">
-                  {"KAZE".split("").map((letter, i) => <motion.span key={`kaze-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
+                {"KAZE".split("").map((letter, i) => <motion.span key={`kaze-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
                   scale: 1.1,
-                  color: "hsl(var(--primary))",
-                  textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
+                  color: "hsl(136, 82%, 41%)",
+                  textShadow: "0 0 30px hsla(136, 82%, 41%, 0.8)"
                 }}>
                       {letter}
                     </motion.span>)}
@@ -151,10 +151,10 @@ const HeroSection = () => {
                   >
                     -
                   </motion.span>
-                  {"Z".split("").map((letter, i) => <motion.span key={`z-${i}`} className="inline-block" custom={i + 5} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
+                {"Z".split("").map((letter, i) => <motion.span key={`z-${i}`} className="inline-block" custom={i + 5} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
                   scale: 1.1,
-                  color: "hsl(var(--primary))",
-                  textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
+                  color: "hsl(136, 82%, 41%)",
+                  textShadow: "0 0 30px hsla(136, 82%, 41%, 0.8)"
                 }}>
                       {letter}
                     </motion.span>)}
@@ -168,18 +168,18 @@ const HeroSection = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 1.0 }}
               >
-                {"POST-APOKALİPTİK ROLEPLAY DENEYİMİ".split("").map((letter, i) => (
+                  {"POST-APOKALİPTİK ROLEPLAY DENEYİMİ".split("").map((letter, i) => (
                   <motion.span 
                     key={`subtitle-${i}`} 
                     className="inline-block font-display text-4xl text-foreground tracking-tight italic"
                     style={{ 
                       marginRight: letter === " " ? "0.6rem" : "-0.02em",
-                      textShadow: "0 0 40px hsl(var(--primary) / 0.3), 0 2px 10px rgba(0,0,0,0.5)"
+                      textShadow: "0 0 40px hsla(136, 82%, 41%, 0.3), 0 2px 10px rgba(0,0,0,0.5)"
                     }}
                     whileHover={{
                       scale: 1.15,
-                      color: "hsl(var(--primary))",
-                      textShadow: "0 0 40px hsl(var(--primary) / 0.9), 0 0 80px hsl(var(--primary) / 0.5)"
+                      color: "hsl(136, 82%, 41%)",
+                      textShadow: "0 0 40px hsla(136, 82%, 41%, 0.9), 0 0 80px hsla(136, 82%, 41%, 0.5)"
                     }}
                   >
                     {letter === " " ? "\u00A0" : letter}
@@ -218,14 +218,14 @@ const HeroSection = () => {
             <motion.div className="bg-card/80 backdrop-blur-sm border border-border/30 rounded-2xl p-4 min-w-[200px] relative overflow-hidden" whileHover={{
             scale: 1.05,
             y: -5,
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px hsl(var(--primary) / 0.2)",
-            borderColor: "hsl(var(--primary) / 0.4)"
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px hsla(136, 82%, 41%, 0.2)",
+            borderColor: "hsla(136, 82%, 41%, 0.4)"
           }} transition={{
             duration: 0.3
           }}>
               {/* Card shimmer effect */}
               <motion.div className="absolute inset-0 pointer-events-none" style={{
-              background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)"
+              background: "linear-gradient(90deg, transparent 0%, hsla(136, 82%, 41%, 0.1) 50%, transparent 100%)"
             }} animate={{
               x: ["-100%", "200%"]
             }} transition={{
@@ -240,7 +240,7 @@ const HeroSection = () => {
                   <img src={logo} alt="Logo" loading="lazy" decoding="async" className="w-10 h-10 object-contain" />
                   <div>
                     <motion.div className="bg-primary text-primary-foreground text-[9px] font-medium px-2 py-0.5 rounded inline-block uppercase tracking-wider" animate={{
-                      boxShadow: ["0 0 0px hsl(var(--primary) / 0)", "0 0 20px hsl(var(--primary) / 0.6)", "0 0 0px hsl(var(--primary) / 0)"]
+                      boxShadow: ["0 0 0px hsla(136, 82%, 41%, 0)", "0 0 20px hsla(136, 82%, 41%, 0.6)", "0 0 0px hsla(136, 82%, 41%, 0)"]
                     }} transition={{
                       duration: 2,
                       repeat: Infinity
@@ -255,7 +255,7 @@ const HeroSection = () => {
                   <motion.div 
                     className="w-2.5 h-2.5 rounded-full bg-primary"
                     animate={{
-                      boxShadow: ["0 0 0px hsl(var(--primary) / 0)", "0 0 12px hsl(var(--primary) / 0.8)", "0 0 0px hsl(var(--primary) / 0)"]
+                      boxShadow: ["0 0 0px hsla(136, 82%, 41%, 0)", "0 0 12px hsla(136, 82%, 41%, 0.8)", "0 0 0px hsla(136, 82%, 41%, 0)"]
                     }}
                     transition={{
                       duration: 1.5,
@@ -323,12 +323,12 @@ const HeroSection = () => {
                   className="inline-block font-display text-xl sm:text-2xl text-foreground tracking-tight italic"
                   style={{ 
                     marginRight: letter === " " ? "0.4rem" : "-0.02em",
-                    textShadow: "0 0 30px hsl(var(--primary) / 0.3), 0 2px 8px rgba(0,0,0,0.5)"
+                    textShadow: "0 0 30px hsla(136, 82%, 41%, 0.3), 0 2px 8px rgba(0,0,0,0.5)"
                   }}
                   whileHover={{
                     scale: 1.15,
-                    color: "hsl(var(--primary))",
-                    textShadow: "0 0 30px hsl(var(--primary) / 0.9), 0 0 60px hsl(var(--primary) / 0.5)"
+                    color: "hsl(136, 82%, 41%)",
+                    textShadow: "0 0 30px hsla(136, 82%, 41%, 0.9), 0 0 60px hsla(136, 82%, 41%, 0.5)"
                   }}
                 >
                   {letter === " " ? "\u00A0" : letter}
@@ -364,7 +364,7 @@ const HeroSection = () => {
                     <motion.div 
                       className="w-2.5 h-2.5 rounded-full bg-primary"
                       animate={{
-                        boxShadow: ["0 0 0px hsl(var(--primary) / 0)", "0 0 10px hsl(var(--primary) / 0.8)", "0 0 0px hsl(var(--primary) / 0)"]
+                        boxShadow: ["0 0 0px hsla(136, 82%, 41%, 0)", "0 0 10px hsla(136, 82%, 41%, 0.8)", "0 0 0px hsla(136, 82%, 41%, 0)"]
                       }}
                       transition={{
                         duration: 1.5,

@@ -140,7 +140,7 @@ const Footer = () => {
             className="hidden md:block text-right text-[10px] text-foreground/30 leading-relaxed font-light flex-shrink-0 w-[120px]"
             variants={itemVariants}
           >
-            <motion.div whileHover={{ color: "hsl(var(--foreground) / 0.5)" }}>
+            <motion.div whileHover={{ color: "hsla(0, 0%, 96%, 0.5)" }}>
               <Link to="/gizlilik-sozlesmesi" className="hover:text-foreground/50 transition-colors">
                 Gizlilik Sözleşmesi
               </Link>

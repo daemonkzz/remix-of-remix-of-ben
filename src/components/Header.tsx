@@ -36,7 +36,7 @@ const Header = () => {
   const navLinkVariants = {
     initial: { opacity: 0, y: -10 },
     animate: { opacity: 1, y: 0 },
-    hover: { y: -2, color: "hsl(var(--foreground))" },
+    hover: { y: -2, color: "hsl(0, 0%, 96%)" },
   };
 
   const socialIconVariants = {

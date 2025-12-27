@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Particle {
   id: number;
@@ -12,11 +13,20 @@ interface Particle {
 
 const AmbientParticles = () => {
   const [particles, setParticles] = useState<Particle[]>([]);
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
+    // Skip particle generation if user prefers reduced motion
+    if (prefersReducedMotion) {
+      setParticles([]);
+      return;
+    }
+
     const generateParticles = () => {
       const newParticles: Particle[] = [];
-      const count = 15; // Low particle count for ambient feel
+      // Mobile: 5 particles, Desktop: 15 particles
+      const count = isMobile ? 5 : 15;
       
       for (let i = 0; i < count; i++) {
         newParticles.push({
@@ -32,7 +42,12 @@ const AmbientParticles = () => {
     };
 
     generateParticles();
-  }, []);
+  }, [prefersReducedMotion, isMobile]);
+
+  // Don't render anything if user prefers reduced motion
+  if (prefersReducedMotion || particles.length === 0) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden contain-paint">
@@ -45,8 +60,8 @@ const AmbientParticles = () => {
             height: particle.size,
             left: `${particle.x}%`,
             top: `${particle.y}%`,
-            background: `radial-gradient(circle, hsl(var(--primary) / 0.6) 0%, hsl(var(--primary) / 0.2) 50%, transparent 100%)`,
-            boxShadow: `0 0 ${particle.size * 2}px hsl(var(--primary) / 0.3)`,
+            background: `radial-gradient(circle, hsla(136, 82%, 41%, 0.6) 0%, hsla(136, 82%, 41%, 0.2) 50%, transparent 100%)`,
+            boxShadow: `0 0 ${particle.size * 2}px hsla(136, 82%, 41%, 0.3)`,
           }}
           animate={{
             x: [0, Math.random() * 200 - 100, Math.random() * 200 - 100, 0],
