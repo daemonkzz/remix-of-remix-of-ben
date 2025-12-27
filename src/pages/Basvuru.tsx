@@ -288,10 +288,10 @@ const Basvuru = () => {
     const fetchData = async () => {
       try {
         // Fetch active form templates
+        // Güvenli view kullan - accessCodes gibi hassas bilgileri gizler
         const { data: templates, error: templatesError } = await supabase
-          .from('form_templates')
+          .from('form_templates_public')
           .select('*')
-          .eq('is_active', true)
           .order('created_at', { ascending: false });
 
         if (templatesError) {

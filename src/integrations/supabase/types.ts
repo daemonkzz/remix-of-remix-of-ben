@@ -715,6 +715,45 @@ export type Database = {
         }
         Relationships: []
       }
+      gallery_images_public: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_path: string | null
+          height: number | null
+          id: string | null
+          mime_type: string | null
+          optimized_size: number | null
+          original_size: number | null
+          url: string | null
+          width: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          height?: number | null
+          id?: string | null
+          mime_type?: string | null
+          optimized_size?: number | null
+          original_size?: number | null
+          url?: string | null
+          width?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          height?: number | null
+          id?: string | null
+          mime_type?: string | null
+          optimized_size?: number | null
+          original_size?: number | null
+          url?: string | null
+          width?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {

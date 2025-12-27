@@ -95,11 +95,11 @@ const BasvuruRevision = () => {
 
       try {
         // Fetch form template
+        // Güvenli view kullan - accessCodes gibi hassas bilgileri gizler
         const { data: templateData, error: templateError } = await supabase
-          .from('form_templates')
+          .from('form_templates_public')
           .select('*')
           .eq('id', formId)
-          .eq('is_active', true)
           .maybeSingle();
 
         if (templateError) {
