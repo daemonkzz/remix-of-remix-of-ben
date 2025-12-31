@@ -83,12 +83,12 @@ export const AdminLayout = ({ children, activeTab: propActiveTab }: AdminLayoutP
 
   // Filter sidebar items based on permissions
   const sidebarItems = allSidebarItems.filter(item => {
-    // 2FA and yetkilendirme only visible to super admins
-    if (item.id === '2fa' || item.id === 'yetkilendirme') {
-      return isSuperAdmin;
-    }
     // Super admin sees everything
     if (isSuperAdmin) return true;
+    // 2FA, yetkilendirme and kullanicilar only visible to super admins
+    if (item.id === '2fa' || item.id === 'yetkilendirme' || item.id === 'kullanicilar') {
+      return false;
+    }
     // Check if user has permission for this tab
     return allowedTabs.includes(item.id as TabKey);
   });

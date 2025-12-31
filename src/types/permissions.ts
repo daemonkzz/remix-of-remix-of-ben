@@ -56,6 +56,7 @@ export const TAB_NAMES = {
   canliharita: 'Canlı Harita',
   kullanicilar: 'Kullanıcılar',
   yetkilendirme: 'Yetki Yönetimi',
+  '2fa': '2FA Yönetimi',
 } as const;
 
 export type TabKey = keyof typeof TAB_NAMES;
@@ -72,4 +73,5 @@ export const ALL_TABS: TabKey[] = [
   'canliharita',
   'kullanicilar',
   'yetkilendirme',
+  '2fa',
 ];
