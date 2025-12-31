@@ -132,21 +132,18 @@ const AdminBasvuruDetay = () => {
       }
 
       try {
-        const { data: hasAdminRole, error: roleError } = await supabase
-          .rpc('has_role', { _user_id: user.id, _role: 'admin' });
+        // Check if user can manage applications
+        const { data: canManageApps, error: roleError } = await supabase
+          .rpc('can_manage', { _user_id: user.id, _feature: 'applications' });
 
         if (roleError) {
-          console.error('Role check error:', roleError);
+          console.error('Permission check error:', roleError);
           toast.error('Yetki kontrolü yapılırken hata oluştu');
           navigate('/');
           return;
         }
 
-        // Also check for moderator role
-        const { data: hasModRole } = await supabase
-          .rpc('has_role', { _user_id: user.id, _role: 'moderator' });
-
-        if (!hasAdminRole && !hasModRole) {
+        if (!canManageApps) {
           toast.error('Bu sayfaya erişim yetkiniz yok');
           navigate('/');
           return;

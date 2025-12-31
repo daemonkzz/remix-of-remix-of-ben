@@ -985,6 +985,10 @@ export type Database = {
         Args: { _tab_name: string; _user_id: string }
         Returns: boolean
       }
+      can_manage: {
+        Args: { _feature: string; _user_id: string }
+        Returns: boolean
+      }
       cleanup_old_audit_logs: { Args: never; Returns: number }
       get_user_permissions: {
         Args: { _user_id: string }
@@ -1013,6 +1017,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      has_any_admin_permission: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

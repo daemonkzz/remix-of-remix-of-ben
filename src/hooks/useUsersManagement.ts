@@ -98,12 +98,10 @@ export const useUsersManagement = (): UseUsersManagementReturn => {
         };
       });
 
-      // Filter only admins if requested
+      // Filter only admins if requested (super_admin or has permissions)
       if (onlyAdmins) {
         mappedUsers = mappedUsers.filter(u => 
-          u.roles.includes('admin') || 
           u.roles.includes('super_admin') || 
-          u.roles.includes('moderator') ||
           u.permissions.length > 0
         );
       }

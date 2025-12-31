@@ -61,12 +61,13 @@ const UpdateEditor = () => {
       }
 
       try {
-        const { data: hasAdminRole, error } = await supabase.rpc('has_role', {
+        // Check if user can manage updates
+        const { data: canManageUpdates, error } = await supabase.rpc('can_manage', {
           _user_id: user.id,
-          _role: 'admin',
+          _feature: 'updates',
         });
 
-        if (error || !hasAdminRole) {
+        if (error || !canManageUpdates) {
           toast.error('Bu sayfaya erişim yetkiniz yok');
           navigate('/');
           return;

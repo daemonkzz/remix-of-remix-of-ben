@@ -43,13 +43,13 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
     }
 
     try {
-      const { data, error } = await supabase.rpc('has_role', {
+      // Check if user has any admin permission (super_admin or custom permissions)
+      const { data, error } = await supabase.rpc('has_any_admin_permission', {
         _user_id: user.id,
-        _role: 'admin',
       });
 
       if (error) {
-        console.error('Error checking admin role:', error);
+        console.error('Error checking admin permission:', error);
         setHasAdminRole(null);
         setRoleCheckError('Yetki kontrolü yapılamadı. Lütfen tekrar deneyin.');
         return;

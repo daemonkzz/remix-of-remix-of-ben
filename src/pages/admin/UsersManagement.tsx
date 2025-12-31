@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { AdminPermission } from '@/types/permissions';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -197,15 +198,13 @@ const UsersManagement = () => {
     });
   };
 
-  const getRoleBadge = (roles: string[]) => {
+  const getRoleBadge = (roles: string[], permissions: AdminPermission[]) => {
     if (roles.includes('super_admin')) {
       return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Super Admin</Badge>;
     }
-    if (roles.includes('admin')) {
-      return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Admin</Badge>;
-    }
-    if (roles.includes('moderator')) {
-      return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Moderatör</Badge>;
+    if (permissions.length > 0) {
+      // Show first permission name as badge
+      return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">{permissions[0].name}</Badge>;
     }
     return <Badge className="bg-muted text-muted-foreground">Kullanıcı</Badge>;
   };
@@ -303,7 +302,7 @@ const UsersManagement = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{getRoleBadge(user.roles)}</TableCell>
+                      <TableCell>{getRoleBadge(user.roles, user.permissions)}</TableCell>
                       <TableCell>
                         {user.is_whitelist_approved ? (
                           <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">

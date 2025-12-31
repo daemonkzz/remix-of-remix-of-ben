@@ -149,17 +149,18 @@ const Admin = () => {
       }
 
       try {
-        const { data: hasAdminRole, error: roleError } = await supabase
-          .rpc('has_role', { _user_id: user.id, _role: 'admin' });
+        // Check if user has any admin permission
+        const { data: hasPermission, error: roleError } = await supabase
+          .rpc('has_any_admin_permission', { _user_id: user.id });
 
         if (roleError) {
-          console.error('Role check error:', roleError);
+          console.error('Permission check error:', roleError);
           toast.error('Yetki kontrolü yapılırken hata oluştu');
           navigate('/');
           return;
         }
 
-        if (!hasAdminRole) {
+        if (!hasPermission) {
           toast.error('Bu sayfaya erişim yetkiniz yok');
           navigate('/');
           return;

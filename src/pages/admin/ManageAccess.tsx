@@ -265,23 +265,9 @@ const ManageAccessContent: React.FC = () => {
   const handleAddUser = async (userId: string) => {
     setAddingUserId(userId);
     try {
-      // 1. Önce user_roles tablosuna admin rolü ekle
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'admin',
-        });
-
-      if (roleError) {
-        // Eğer zaten varsa (unique constraint) devam et
-        if (!roleError.message.includes('duplicate')) {
-          if (import.meta.env.DEV) console.error('Add role error:', roleError);
-          toast.error('Admin rolü eklenirken hata oluştu');
-          setAddingUserId(null);
-          return;
-        }
-      }
+      // Not: user_roles'a ekleme yapmıyoruz artık
+      // Yetkiler admin_permissions tablosu üzerinden yönetiliyor
+      // Sadece admin_2fa_settings kaydı oluşturuyoruz
 
       // 2. Sonra admin_2fa_settings tablosuna kayıt ekle
       const { error } = await supabase
@@ -328,17 +314,8 @@ const ManageAccessContent: React.FC = () => {
         return;
       }
 
-      // 2. user_roles'dan admin rolünü sil
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', removingUserId)
-        .eq('role', 'admin');
-
-      if (roleError) {
-        if (import.meta.env.DEV) console.error('Remove role error:', roleError);
-        // Ama kullanıcı 2fa_settings'den silindiği için hata gösterme
-      }
+      // Not: user_roles'dan silme yapmıyoruz artık
+      // Yetkiler admin_permissions tablosu üzerinden yönetiliyor
 
       toast.success('Kullanıcı yetki listesinden kaldırıldı');
       fetchAdminList();

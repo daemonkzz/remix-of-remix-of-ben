@@ -54,10 +54,11 @@ const FormBuilder = () => {
       }
 
       try {
-        const { data: hasAdminRole, error: roleError } = await supabase
-          .rpc('has_role', { _user_id: user.id, _role: 'admin' });
+        // Check if user can manage forms
+        const { data: canManageForms, error: roleError } = await supabase
+          .rpc('can_manage', { _user_id: user.id, _feature: 'forms' });
 
-        if (roleError || !hasAdminRole) {
+        if (roleError || !canManageForms) {
           toast.error('Bu sayfaya erişim yetkiniz yok');
           navigate('/admin');
           return;
