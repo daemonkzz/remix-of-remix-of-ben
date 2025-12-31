@@ -38,6 +38,7 @@ interface ApplicationCardProps {
 
 interface HistoryItemProps {
   id: number;
+  applicationNumber: string | null;
   title: string;
   status: "approved" | "pending" | "rejected" | "revision_requested";
   type: string;
@@ -52,6 +53,7 @@ interface UserApplication {
   admin_note: string | null;
   revision_requested_fields: string[] | null;
   revision_notes: Record<string, string> | null;
+  application_number: string | null;
 }
 
 const normalizeStringArray = (value: unknown): string[] | null => {
@@ -238,7 +240,7 @@ const ApplicationCard = ({ title, description, status, formId, featured, delay =
   );
 };
 
-const HistoryItem = ({ id, title, status, type, delay = 0 }: HistoryItemProps) => {
+const HistoryItem = ({ id, applicationNumber, title, status, type, delay = 0 }: HistoryItemProps) => {
   const statusConfig = {
     approved: { color: "text-primary", label: "Onaylandı", icon: CheckCircle },
     pending: { color: "text-amber-500", label: "Beklemede", icon: Clock },
@@ -266,8 +268,8 @@ const HistoryItem = ({ id, title, status, type, delay = 0 }: HistoryItemProps) =
             {config.label}
           </div>
         </div>
-        <span className="text-[10px] text-muted-foreground font-mono">
-          #{id}
+        <span className="text-[10px] text-primary/80 font-mono bg-primary/10 px-2 py-0.5 rounded">
+          {applicationNumber || `#${id}`}
         </span>
       </div>
     </motion.div>
@@ -327,7 +329,7 @@ const Basvuru = () => {
         // Fetch user's applications
         const { data: applications, error: appError } = await supabase
           .from('applications')
-          .select('id, type, status, created_at, admin_note, revision_requested_fields, revision_notes')
+          .select('id, type, status, created_at, admin_note, revision_requested_fields, revision_notes, application_number')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
@@ -339,6 +341,7 @@ const Basvuru = () => {
             status: typeof app.status === "string" ? app.status : String(app.status ?? ""),
             revision_requested_fields: normalizeStringArray(app.revision_requested_fields),
             revision_notes: normalizeStringRecord(app.revision_notes),
+            application_number: app.application_number as string | null,
           }));
           setUserApplications(typedApplications);
         }
@@ -440,6 +443,7 @@ const Basvuru = () => {
     const template = formTemplates.find(t => t.id === app.type);
     return {
       id: app.id,
+      applicationNumber: app.application_number,
       title: template?.title || app.type,
       status: app.status as "approved" | "pending" | "rejected" | "revision_requested",
       type: app.type,

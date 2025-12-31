@@ -118,6 +118,9 @@ const AdminBasvuruDetay = () => {
   const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({});
 
   // Check if user has admin role
+  const [confirmApprove, setConfirmApprove] = useState(false);
+  const [confirmReject, setConfirmReject] = useState(false);
+
   useEffect(() => {
     const checkAdminRole = async () => {
       if (authLoading) return;
@@ -746,34 +749,60 @@ const AdminBasvuruDetay = () => {
 
             {/* Approve / Reject Buttons */}
             {!isRevisionMode && (
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                  onClick={() => updateStatus('approved')}
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? (
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  ) : (
-                    <Check className="w-5 h-5 mr-2" />
-                  )}
-                  Başvuruyu Onayla
-                </Button>
-                <Button
-                  size="lg"
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={() => updateStatus('rejected')}
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? (
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  ) : (
-                    <X className="w-5 h-5 mr-2" />
-                  )}
-                  Başvuruyu Reddet
-                </Button>
+              <div className="space-y-4">
+                {/* Approve Confirmation */}
+                <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                  <Checkbox 
+                    id="confirm-approve" 
+                    checked={confirmApprove} 
+                    onCheckedChange={(checked) => setConfirmApprove(checked as boolean)} 
+                  />
+                  <Label htmlFor="confirm-approve" className="text-sm text-foreground cursor-pointer">
+                    Bu başvuruyu onayladığımı ve kullanıcının whitelist'e ekleneceğini kabul ediyorum
+                  </Label>
+                </div>
+
+                {/* Reject Confirmation */}
+                <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <Checkbox 
+                    id="confirm-reject" 
+                    checked={confirmReject} 
+                    onCheckedChange={(checked) => setConfirmReject(checked as boolean)} 
+                  />
+                  <Label htmlFor="confirm-reject" className="text-sm text-foreground cursor-pointer">
+                    Bu başvuruyu reddettiğimi onaylıyorum
+                  </Label>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button
+                    size="lg"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+                    onClick={() => updateStatus('approved')}
+                    disabled={isUpdating || !confirmApprove}
+                  >
+                    {isUpdating ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : (
+                      <Check className="w-5 h-5 mr-2" />
+                    )}
+                    Başvuruyu Onayla
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="destructive"
+                    className="flex-1 disabled:opacity-50"
+                    onClick={() => updateStatus('rejected')}
+                    disabled={isUpdating || !confirmReject}
+                  >
+                    {isUpdating ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : (
+                      <X className="w-5 h-5 mr-2" />
+                    )}
+                    Başvuruyu Reddet
+                  </Button>
+                </div>
               </div>
             )}
           </div>

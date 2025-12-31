@@ -143,10 +143,12 @@ export type Database = {
           ai_decision: string | null
           ai_evaluated_at: string | null
           ai_evaluation: Json | null
+          application_number: string | null
           content: Json
           content_history: Json | null
           created_at: string
           id: number
+          parent_application_id: number | null
           revision_notes: Json | null
           revision_requested_fields: Json | null
           status: string | null
@@ -159,10 +161,12 @@ export type Database = {
           ai_decision?: string | null
           ai_evaluated_at?: string | null
           ai_evaluation?: Json | null
+          application_number?: string | null
           content: Json
           content_history?: Json | null
           created_at?: string
           id?: number
+          parent_application_id?: number | null
           revision_notes?: Json | null
           revision_requested_fields?: Json | null
           status?: string | null
@@ -175,10 +179,12 @@ export type Database = {
           ai_decision?: string | null
           ai_evaluated_at?: string | null
           ai_evaluation?: Json | null
+          application_number?: string | null
           content?: Json
           content_history?: Json | null
           created_at?: string
           id?: number
+          parent_application_id?: number | null
           revision_notes?: Json | null
           revision_requested_fields?: Json | null
           status?: string | null
@@ -186,6 +192,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "applications_parent_application_id_fkey"
+            columns: ["parent_application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "applications_user_id_fkey"
             columns: ["user_id"]
