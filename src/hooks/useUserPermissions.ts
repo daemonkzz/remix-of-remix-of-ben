@@ -59,7 +59,7 @@ export const useUserPermissions = (): UseUserPermissionsReturn => {
 
   // Calculate allowed tabs
   const allowedTabs: TabKey[] = isSuperAdmin
-    ? ['dashboard', 'basvurular', 'formlar', 'guncellemeler', 'bildirimler', 'kurallar', 'sozluk', 'galeri', 'canliharita', 'kullanicilar', 'yetkilendirme']
+    ? ['dashboard', 'basvurular', 'formlar', 'guncellemeler', 'bildirimler', 'kurallar', 'sozluk', 'galeri', 'canliharita', 'kullanicilar', 'yetkilendirme', '2fa']
     : (permissions.flatMap(p => p.allowed_tabs) as TabKey[]).filter((tab, idx, arr) => arr.indexOf(tab) === idx);
 
   const canAccessTab = useCallback((tab: TabKey): boolean => {
