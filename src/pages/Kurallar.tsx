@@ -1,12 +1,33 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Search, ChevronDown, ChevronRight } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import type { MainCategory, SubCategory, Rule } from "@/types/rules";
+import type { MainCategory } from "@/types/rules";
 import { kazeRulesData } from "@/data/rulesData";
+
+// Rule components
+import { RuleContentRenderer } from "@/components/rules/RuleContentRenderer";
+import { CategoryDefinitionBox } from "@/components/rules/CategoryDefinitionBox";
+import { CriticalBadge } from "@/components/rules/CriticalBadge";
+import { ShareButton } from "@/components/rules/ShareButton";
+import { ReadingProgress } from "@/components/rules/ReadingProgress";
+import { MobileBackButton } from "@/components/rules/MobileBackButton";
+import { SearchHistoryDropdown } from "@/components/rules/SearchHistoryDropdown";
+import { KeyboardShortcutsHint } from "@/components/rules/KeyboardShortcutsHint";
+
+// Hooks
+import {
+  useSearchHistory,
+  useShareRule,
+  useKeyboardNavigation,
+  useRuleHashNavigation,
+  useReadingProgress,
+  isRuleCritical,
+  flattenRules,
+} from "@/hooks/useRulesFeatures";
 
 const rulesData: MainCategory[] = kazeRulesData;
 
@@ -17,7 +38,16 @@ const Kurallar = () => {
   const [activeRule, setActiveRule] = useState<string | null>(null);
   const [rulesFromDb, setRulesFromDb] = useState<MainCategory[] | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
+  const [showMobileBack, setShowMobileBack] = useState(false);
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Custom hooks
+  const { history, addToHistory, clearHistory, removeFromHistory } = useSearchHistory();
+  const { shareRule } = useShareRule();
+  const readingProgress = useReadingProgress();
 
   // Fetch rules from database
   useEffect(() => {
@@ -28,10 +58,8 @@ const Kurallar = () => {
         .limit(1)
         .maybeSingle();
 
-      // Only use DB rules if they have enough categories (new format has 2 main categories with many subcategories)
       if (!error && data && Array.isArray(data.data) && data.data.length > 0) {
         const dbRules = data.data as MainCategory[];
-        // Check if DB has updated rules (should have at least 8 subcategories in first category)
         const hasUpdatedRules = dbRules[0]?.subCategories?.length >= 8;
         if (hasUpdatedRules) {
           setRulesFromDb(dbRules);
@@ -42,8 +70,10 @@ const Kurallar = () => {
     fetchRules();
   }, []);
 
-  // Use database rules if available, otherwise fallback to static data
   const currentRulesData = rulesFromDb || rulesData;
+
+  // Flatten rules for keyboard navigation
+  const flatRules = useMemo(() => flattenRules(currentRulesData), [currentRulesData]);
 
   const toggleCategory = (id: string) => {
     setExpandedCategories((prev) =>
@@ -57,16 +87,57 @@ const Kurallar = () => {
     );
   };
 
-  const scrollToRule = (ruleId: string) => {
+  const expandCategories = useCallback((categoryIds: string[], subCategoryIds: string[]) => {
+    setExpandedCategories((prev) => [...new Set([...prev, ...categoryIds])]);
+    setExpandedSubCategories((prev) => [...new Set([...prev, ...subCategoryIds])]);
+  }, []);
+
+  const scrollToRule = useCallback((ruleId: string) => {
     setActiveRule(ruleId);
     const element = sectionRefs.current[ruleId];
     if (element) {
-      // Calculate position to center the element on screen
       const elementRect = element.getBoundingClientRect();
       const absoluteElementTop = window.pageYOffset + elementRect.top;
       const middle = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2);
       window.scrollTo({ top: middle, behavior: "smooth" });
     }
+  }, []);
+
+  const scrollToSidebar = useCallback(() => {
+    if (sidebarRef.current) {
+      sidebarRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
+  // Initialize hooks
+  useKeyboardNavigation(flatRules, scrollToRule, activeRule);
+  useRuleHashNavigation(scrollToRule, expandCategories, currentRulesData);
+
+  // Track scroll for mobile back button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowMobileBack(window.scrollY > 500);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Handle search with history
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleSearchBlur = () => {
+    setTimeout(() => setShowSearchHistory(false), 200);
+    if (searchQuery.trim()) {
+      addToHistory(searchQuery.trim());
+    }
+  };
+
+  const handleHistorySelect = (query: string) => {
+    setSearchQuery(query);
+    setShowSearchHistory(false);
+    searchInputRef.current?.focus();
   };
 
   // Filter rules based on search query
@@ -108,24 +179,24 @@ const Kurallar = () => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-        delayChildren: 0.1,
-      },
+      transition: { staggerChildren: 0.05, delayChildren: 0.1 },
     },
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.4 },
-    },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
+
+  // Count total rules in a category
+  const countRules = (category: MainCategory) =>
+    category.subCategories.reduce((acc, sub) => acc + sub.rules.length, 0);
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Reading Progress Bar */}
+      <ReadingProgress progress={readingProgress} />
+      
       <Header />
       
       {/* Background ambient effects */}
@@ -145,14 +216,6 @@ const Kurallar = () => {
           }}
           animate={{ x: [0, -40, 0], y: [0, -30, 0] }}
           transition={{ duration: 15, repeat: Infinity, delay: 5 }}
-        />
-        <motion.div
-          className="absolute top-1/2 left-1/3 w-[400px] h-[400px] rounded-full"
-          style={{
-            background: "radial-gradient(circle, hsl(var(--primary) / 0.02) 0%, transparent 60%)",
-          }}
-          animate={{ x: [0, 30, 0], y: [0, -40, 0] }}
-          transition={{ duration: 18, repeat: Infinity, delay: 3 }}
         />
         
         {/* Floating particles */}
@@ -194,11 +257,16 @@ const Kurallar = () => {
             <h2 className="font-display text-[32px] md:text-[42px] lg:text-[52px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold mt-2">
               KURALLARI
             </h2>
+            
+            {/* Keyboard shortcuts hint */}
+            <div className="flex justify-center mt-4">
+              <KeyboardShortcutsHint />
+            </div>
           </motion.div>
 
           {/* Search Bar */}
           <motion.div
-            className="max-w-2xl mx-auto mb-10"
+            className="max-w-2xl mx-auto mb-10 relative"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -206,10 +274,13 @@ const Kurallar = () => {
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
               <Input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Kural ara... (örn: RDM, VDM, soygun)"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
+                onFocus={() => setShowSearchHistory(true)}
+                onBlur={handleSearchBlur}
                 className="pl-12 pr-4 py-6 bg-secondary/30 border-border/20 text-foreground placeholder:text-foreground/40 rounded-xl text-base focus:border-primary/50 focus:ring-primary/20"
               />
               {searchQuery && (
@@ -221,6 +292,16 @@ const Kurallar = () => {
                 </button>
               )}
             </div>
+            
+            {/* Search History Dropdown */}
+            <SearchHistoryDropdown
+              history={history}
+              show={showSearchHistory && !searchQuery && history.length > 0}
+              onSelect={handleHistorySelect}
+              onRemove={removeFromHistory}
+              onClear={clearHistory}
+            />
+            
             {searchQuery && (
               <p className="text-foreground/50 text-sm mt-2 text-center">
                 {filteredData.reduce((acc, cat) => 
@@ -233,6 +314,7 @@ const Kurallar = () => {
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
             {/* Sidebar Navigation */}
             <motion.aside
+              ref={sidebarRef}
               className="lg:w-80 flex-shrink-0"
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -318,7 +400,10 @@ const Kurallar = () => {
                                               whileHover={{ x: 2 }}
                                             >
                                               <span className="text-primary/40 font-mono flex-shrink-0">{rule.id}</span>
-                                              <span className="truncate">{rule.title}</span>
+                                              <span className="truncate flex-1">{rule.title}</span>
+                                              {isRuleCritical(rule.id) && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500/60 flex-shrink-0 mt-1" />
+                                              )}
                                             </motion.button>
                                           ))}
                                         </div>
@@ -361,7 +446,7 @@ const Kurallar = () => {
                     variants={itemVariants}
                   >
                     {/* Main Category Header */}
-                    <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center gap-4 mb-4">
                       <span className="text-primary font-display text-[50px] md:text-[60px] italic leading-none opacity-30">
                         {category.id}
                       </span>
@@ -369,6 +454,14 @@ const Kurallar = () => {
                         {category.title}
                       </h3>
                     </div>
+
+                    {/* Category Definition Box */}
+                    <CategoryDefinitionBox
+                      categoryId={category.id}
+                      title={category.title}
+                      subCategoryCount={category.subCategories.length}
+                      ruleCount={countRules(category)}
+                    />
 
                     {/* Sub Categories */}
                     <div className="space-y-10">
@@ -411,7 +504,6 @@ const Kurallar = () => {
                                       exit={{ opacity: 0 }}
                                       transition={{ duration: 0.2 }}
                                     >
-                                      {/* Traveling glow */}
                                       <motion.div
                                         className="absolute top-0 left-0 w-full h-full"
                                         initial={{ x: "-100%" }}
@@ -431,41 +523,39 @@ const Kurallar = () => {
                                       ? "border-primary/60 bg-secondary/50 shadow-[0_0_20px_-5px_hsl(var(--primary)/0.4)]"
                                       : "border-border/20 hover:border-primary/30"
                                   }`}
-                                  animate={activeRule === rule.id ? { 
-                                    scale: [1, 1.005, 1],
-                                  } : { scale: 1 }}
-                                  transition={{ 
-                                    scale: { duration: 0.3, ease: "easeOut" }
-                                  }}
+                                  animate={activeRule === rule.id ? { scale: [1, 1.005, 1] } : { scale: 1 }}
+                                  transition={{ scale: { duration: 0.3, ease: "easeOut" } }}
                                 >
                                   {/* Rule Header */}
-                                  <div className="flex items-center gap-3 mb-4">
-                                    <span className={`font-mono text-xs px-2.5 py-1 rounded-md transition-all duration-300 ${
-                                      activeRule === rule.id 
-                                        ? "bg-primary/30 border border-primary/50 text-primary" 
-                                        : "bg-secondary/60 border border-border/40 text-foreground/60"
-                                    }`}>
-                                      {rule.id}
-                                    </span>
-                                    <h5 className="font-display text-lg md:text-xl text-primary italic">
-                                      {searchQuery ? (
-                                        <HighlightText text={rule.title} query={searchQuery} />
-                                      ) : (
-                                        rule.title
-                                      )}
-                                    </h5>
+                                  <div className="flex items-center justify-between gap-3 mb-4">
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                      <span className={`font-mono text-xs px-2.5 py-1 rounded-md transition-all duration-300 ${
+                                        activeRule === rule.id 
+                                          ? "bg-primary/30 border border-primary/50 text-primary" 
+                                          : "bg-secondary/60 border border-border/40 text-foreground/60"
+                                      }`}>
+                                        {rule.id}
+                                      </span>
+                                      <h5 className="font-display text-lg md:text-xl text-primary italic">
+                                        {searchQuery ? (
+                                          <HighlightText text={rule.title} query={searchQuery} />
+                                        ) : (
+                                          rule.title
+                                        )}
+                                      </h5>
+                                      {isRuleCritical(rule.id) && <CriticalBadge />}
+                                    </div>
+                                    
+                                    {/* Share Button */}
+                                    <ShareButton ruleId={rule.id} onShare={shareRule} />
                                   </div>
 
-                                  {/* Rule Description with bullet point */}
-                                  <div className="flex items-start gap-3 ml-1">
-                                    <span className="w-2 h-2 rounded-full bg-primary/60 mt-2 flex-shrink-0" />
-                                    <p className="text-foreground/80 text-sm md:text-base leading-relaxed">
-                                      {searchQuery ? (
-                                        <HighlightText text={rule.description} query={searchQuery} />
-                                      ) : (
-                                        rule.description
-                                      )}
-                                    </p>
+                                  {/* Rule Description with rich formatting */}
+                                  <div className="ml-1">
+                                    <RuleContentRenderer
+                                      content={rule.description}
+                                      searchQuery={searchQuery}
+                                    />
                                   </div>
 
                                   {/* Last Update */}
@@ -501,6 +591,12 @@ const Kurallar = () => {
           </div>
         </div>
       </main>
+
+      {/* Mobile Back Button */}
+      <MobileBackButton
+        show={showMobileBack}
+        onClick={scrollToSidebar}
+      />
 
       <Footer />
     </div>
