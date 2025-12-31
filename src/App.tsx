@@ -35,6 +35,8 @@ const NotificationEditor = lazy(() => import("./pages/admin/NotificationEditor")
 const WhiteboardEditor = lazy(() => import("./pages/admin/WhiteboardEditor"));
 const Locked = lazy(() => import("./pages/admin/Locked"));
 const GlossaryEditor = lazy(() => import("./pages/admin/GlossaryEditor"));
+const UsersManagement = lazy(() => import("./pages/admin/UsersManagement"));
+const PermissionsEditor = lazy(() => import("./pages/admin/PermissionsEditor"));
 
 // Optimized QueryClient with caching
 const queryClient = new QueryClient({
@@ -86,6 +88,8 @@ const RouteEffects = () => {
                     <Route path="notification-editor" element={<NotificationEditor />} />
                     <Route path="whiteboard-editor" element={<WhiteboardEditor />} />
                     <Route path="glossary-editor" element={<GlossaryEditor />} />
+                    <Route path="users" element={<UsersManagement />} />
+                    <Route path="permissions" element={<PermissionsEditor />} />
                     <Route path="locked" element={<Locked />} />
                   </Routes>
                 </Suspense>

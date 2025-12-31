@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Shield,
@@ -12,12 +12,18 @@ import {
   PanelLeftClose,
   PanelLeft,
   BookOpen,
+  LayoutDashboard,
+  Key,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SessionTimeoutIndicator } from '@/components/admin/SessionTimeoutIndicator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import type { TabKey } from '@/types/permissions';
 
 type TabType =
+  | 'dashboard'
   | 'basvurular'
   | 'formlar'
   | 'guncellemeler'
@@ -27,14 +33,16 @@ type TabType =
   | 'galeri'
   | 'canliharita'
   | 'kullanicilar'
-  | 'yetkilendirme';
+  | 'yetkilendirme'
+  | '2fa';
 
 interface AdminLayoutProps {
   children: ReactNode;
   activeTab?: TabType;
 }
 
-const sidebarItems = [
+const allSidebarItems = [
+  { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard, path: '/admin?tab=dashboard' },
   { id: 'basvurular' as TabType, label: 'Başvurular', icon: FileText, path: '/admin?tab=basvurular' },
   { id: 'formlar' as TabType, label: 'Form Şablonları', icon: Settings, path: '/admin?tab=formlar' },
   { id: 'guncellemeler' as TabType, label: 'Güncellemeler', icon: Bell, path: '/admin?tab=guncellemeler' },
@@ -43,8 +51,9 @@ const sidebarItems = [
   { id: 'sozluk' as TabType, label: 'Terimler Sözlüğü', icon: BookOpen, path: '/admin/glossary-editor' },
   { id: 'galeri' as TabType, label: 'Medya Galeri', icon: ImageIcon, path: '/admin/gallery' },
   { id: 'canliharita' as TabType, label: 'Canlı Harita', icon: Map, path: '/admin/whiteboard-editor' },
-  { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users, path: '/admin?tab=kullanicilar' },
-  { id: 'yetkilendirme' as TabType, label: 'Yetki Yönetimi', icon: ShieldCheck, path: '/admin/manage-access' },
+  { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users, path: '/admin/users' },
+  { id: 'yetkilendirme' as TabType, label: 'Yetki Yönetimi', icon: ShieldCheck, path: '/admin/permissions' },
+  { id: '2fa' as TabType, label: '2FA Yönetimi', icon: Key, path: '/admin/manage-access' },
 ];
 
 // Helper to detect active tab from location
@@ -53,26 +62,48 @@ const getActiveTabFromPath = (pathname: string, search: string): TabType => {
   if (pathname === '/admin/glossary-editor') return 'sozluk';
   if (pathname === '/admin/gallery') return 'galeri';
   if (pathname === '/admin/whiteboard-editor') return 'canliharita';
-  if (pathname === '/admin/manage-access') return 'yetkilendirme';
+  if (pathname === '/admin/manage-access') return '2fa';
   if (pathname === '/admin/notification-editor') return 'bildirimler';
+  if (pathname === '/admin/users') return 'kullanicilar';
+  if (pathname === '/admin/permissions') return 'yetkilendirme';
 
   // Check query params for main admin tabs
   const params = new URLSearchParams(search);
   const tab = params.get('tab') as TabType | null;
-  return tab || 'basvurular';
+  return tab || 'dashboard';
 };
 
 export const AdminLayout = ({ children, activeTab: propActiveTab }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isSuperAdmin, allowedTabs, isLoading: permLoading } = useUserPermissions();
 
-  // Note: Auth/role/2FA is handled by AdminRouteGuard at route-level (/admin/*).
   const activeTab = propActiveTab || getActiveTabFromPath(location.pathname, location.search);
 
-  const handleTabClick = (item: (typeof sidebarItems)[number]) => {
+  // Filter sidebar items based on permissions
+  const sidebarItems = allSidebarItems.filter(item => {
+    // 2FA and yetkilendirme only visible to super admins
+    if (item.id === '2fa' || item.id === 'yetkilendirme') {
+      return isSuperAdmin;
+    }
+    // Super admin sees everything
+    if (isSuperAdmin) return true;
+    // Check if user has permission for this tab
+    return allowedTabs.includes(item.id as TabKey);
+  });
+
+  const handleTabClick = (item: (typeof allSidebarItems)[number]) => {
     navigate(item.path);
   };
+
+  if (permLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">

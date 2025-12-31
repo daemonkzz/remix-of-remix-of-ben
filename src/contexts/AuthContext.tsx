@@ -7,6 +7,8 @@ export interface UserProfile {
   username: string | null;
   avatar_url: string | null;
   discord_id: string | null;
+  is_banned: boolean;
+  ban_reason: string | null;
 }
 
 interface AuthContextType {
@@ -43,7 +45,7 @@ const cleanUrlHash = () => {
 const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, avatar_url, discord_id')
+    .select('id, username, avatar_url, discord_id, is_banned, ban_reason')
     .eq('id', userId)
     .single();
   
@@ -52,7 +54,11 @@ const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => 
     return null;
   }
   
-  return data;
+  return {
+    ...data,
+    is_banned: data.is_banned ?? false,
+    ban_reason: data.ban_reason ?? null,
+  };
 };
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
@@ -81,8 +87,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Clean URL hash after OAuth redirect
           cleanUrlHash();
           // Fetch profile data with setTimeout to avoid deadlock
-          setTimeout(() => {
-            fetchUserProfile(session.user.id).then(setProfile);
+          setTimeout(async () => {
+            const userProfile = await fetchUserProfile(session.user.id);
+            if (userProfile?.is_banned) {
+              console.log('Kullanıcı yasaklı, çıkış yapılıyor');
+              await supabase.auth.signOut();
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              // Show ban message via alert since toast might not be available
+              alert(`Hesabınız yasaklanmıştır. Sebep: ${userProfile.ban_reason || 'Belirtilmemiş'}`);
+              return;
+            }
+            setProfile(userProfile);
           }, 0);
         }
 
