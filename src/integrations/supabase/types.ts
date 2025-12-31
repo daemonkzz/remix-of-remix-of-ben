@@ -58,6 +58,71 @@ export type Database = {
           },
         ]
       }
+      admin_permissions: {
+        Row: {
+          allowed_tabs: string[]
+          can_manage_applications: boolean
+          can_manage_forms: boolean
+          can_manage_gallery: boolean
+          can_manage_glossary: boolean
+          can_manage_notifications: boolean
+          can_manage_rules: boolean
+          can_manage_updates: boolean
+          can_manage_users: boolean
+          can_manage_whiteboard: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_tabs?: string[]
+          can_manage_applications?: boolean
+          can_manage_forms?: boolean
+          can_manage_gallery?: boolean
+          can_manage_glossary?: boolean
+          can_manage_notifications?: boolean
+          can_manage_rules?: boolean
+          can_manage_updates?: boolean
+          can_manage_users?: boolean
+          can_manage_whiteboard?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_tabs?: string[]
+          can_manage_applications?: boolean
+          can_manage_forms?: boolean
+          can_manage_gallery?: boolean
+          can_manage_glossary?: boolean
+          can_manage_notifications?: boolean
+          can_manage_rules?: boolean
+          can_manage_updates?: boolean
+          can_manage_users?: boolean
+          can_manage_whiteboard?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_permissions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           author_id: string | null
@@ -480,32 +545,52 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          ban_reason: string | null
+          banned_at: string | null
+          banned_by: string | null
           created_at: string
           discord_id: string | null
           id: string
+          is_banned: boolean
           is_whitelist_approved: boolean | null
           steam_id: string | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           created_at?: string
           discord_id?: string | null
           id: string
+          is_banned?: boolean
           is_whitelist_approved?: boolean | null
           steam_id?: string | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           created_at?: string
           discord_id?: string | null
           id?: string
+          is_banned?: boolean
           is_whitelist_approved?: boolean | null
           steam_id?: string | null
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_banned_by_fkey"
+            columns: ["banned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rules: {
         Row: {
@@ -583,6 +668,52 @@ export type Database = {
           {
             foreignKeyName: "fk_updates_author"
             columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_admin_permissions: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          permission_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          permission_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          permission_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_admin_permissions_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_admin_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "admin_permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_admin_permissions_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -850,7 +981,38 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_tab: {
+        Args: { _tab_name: string; _user_id: string }
+        Returns: boolean
+      }
       cleanup_old_audit_logs: { Args: never; Returns: number }
+      get_user_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          allowed_tabs: string[]
+          can_manage_applications: boolean
+          can_manage_forms: boolean
+          can_manage_gallery: boolean
+          can_manage_glossary: boolean
+          can_manage_notifications: boolean
+          can_manage_rules: boolean
+          can_manage_updates: boolean
+          can_manage_users: boolean
+          can_manage_whiteboard: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_permissions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -858,6 +1020,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       record_totp_result: {
         Args: { p_success: boolean; p_user_id: string }
         Returns: Json
@@ -872,7 +1035,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1000,7 +1163,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "super_admin"],
     },
   },
 } as const
