@@ -10,19 +10,18 @@ import {
   Check, 
   X, 
   Loader2,
-  Shield,
   Plus,
-  Settings,
   Pencil,
   Trash2,
   ToggleLeft,
   ToggleRight,
   ShieldCheck,
   Filter,
-  Image as ImageIcon,
-  Map,
-  LayoutDashboard
+  Settings,
+  Shield,
+  Image as ImageIcon
 } from 'lucide-react';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -50,7 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SessionTimeoutIndicator } from '@/components/admin/SessionTimeoutIndicator';
+
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 import type { UpdateData } from '@/types/update';
 import { DashboardStats } from '@/components/admin/DashboardStats';
@@ -502,69 +501,9 @@ const Admin = () => {
     return null;
   }
 
-  const sidebarItems = [
-    { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'basvurular' as TabType, label: 'Başvurular', icon: FileText },
-    { id: 'formlar' as TabType, label: 'Form Şablonları', icon: Settings },
-    { id: 'guncellemeler' as TabType, label: 'Güncellemeler', icon: Bell },
-    { id: 'bildirimler' as TabType, label: 'Bildirimler', icon: Bell },
-    { id: 'kurallar' as TabType, label: 'Kurallar', icon: Shield },
-    { id: 'galeri' as TabType, label: 'Medya Galeri', icon: ImageIcon },
-    { id: 'canliharita' as TabType, label: 'Canlı Harita', icon: Map },
-    { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users },
-    { id: 'yetkilendirme' as TabType, label: 'Yetki Yönetimi', icon: ShieldCheck },
-  ];
-
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-card border-r border-border flex flex-col">
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-primary" />
-            <div>
-              <h1 className="font-bold text-lg text-foreground">Admin Panel</h1>
-              <p className="text-xs text-muted-foreground">Yönetim Paneli</p>
-            </div>
-          </div>
-          <div className="mt-4">
-            <SessionTimeoutIndicator />
-          </div>
-        </div>
-
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            {sidebarItems.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => handleTabClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                    activeTab === item.id
-                      ? 'bg-primary/10 text-primary border border-primary/20'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <div className="p-4 border-t border-border">
-          <Button 
-            variant="outline" 
-            className="w-full"
-            onClick={() => navigate('/')}
-          >
-            Ana Sayfaya Dön
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-8">
+    <AdminLayout activeTab={activeTab}>
+      <div className="p-8">
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && <DashboardStats />}
 
@@ -1057,8 +996,6 @@ const Admin = () => {
             </div>
           </div>
         )}
-      </main>
-
       {/* Delete Form Confirmation Dialog */}
       <AlertDialog open={!!deletingFormId} onOpenChange={() => setDeletingFormId(null)}>
         <AlertDialogContent className="bg-card border-border">
@@ -1100,7 +1037,8 @@ const Admin = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 
