@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Loader2, AlertCircle, Lock, KeyRound, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, Send, Loader2, AlertCircle, Lock, KeyRound, CheckCircle2, Sparkles, Save, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,17 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { format } from "date-fns";
 import type { FormQuestion, FormSettings } from "@/types/formBuilder";
 
 interface FormTemplate {
@@ -40,6 +51,14 @@ const BasvuruForm = () => {
   const [accessCode, setAccessCode] = useState('');
   const [isCodeVerified, setIsCodeVerified] = useState(false);
   const [codeError, setCodeError] = useState('');
+
+  // Draft save state
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+
+  // localStorage key - unique per user and form
+  const draftKey = user && formId ? `form_draft_${user.id}_${formId}` : null;
 
   // Load form template from secure view (accessCodes hidden)
   useEffect(() => {
@@ -84,6 +103,74 @@ const BasvuruForm = () => {
 
     loadFormTemplate();
   }, [formId, toast]);
+
+  // Load saved draft from localStorage
+  useEffect(() => {
+    if (draftKey && formTemplate) {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft);
+          setFormData(parsed.data || {});
+          setLastSaved(parsed.savedAt ? new Date(parsed.savedAt) : null);
+          toast({
+            title: "Taslak Yüklendi",
+            description: "Önceki cevaplarınız otomatik olarak yüklendi.",
+          });
+        } catch (e) {
+          console.error('Draft parse error:', e);
+        }
+      }
+    }
+  }, [draftKey, formTemplate]);
+
+  // Save draft function
+  const saveDraft = () => {
+    if (!draftKey) return;
+    
+    const now = new Date();
+    
+    localStorage.setItem(draftKey, JSON.stringify({
+      data: formData,
+      savedAt: now.toISOString()
+    }));
+    
+    setLastSaved(now);
+    setJustSaved(true);
+    
+    toast({
+      title: "Cevaplar Kaydedildi",
+      description: "Cevaplarınız başarıyla kaydedildi.",
+    });
+
+    // Reset justSaved after 3 seconds
+    setTimeout(() => {
+      setJustSaved(false);
+    }, 3000);
+  };
+
+  // Clear form function
+  const clearForm = () => {
+    if (!draftKey) return;
+    
+    localStorage.removeItem(draftKey);
+    setFormData({});
+    setLastSaved(null);
+    setShowClearConfirm(false);
+    setJustSaved(false);
+    
+    toast({
+      title: "Form Temizlendi",
+      description: "Tüm cevaplarınız silindi.",
+    });
+  };
+
+  // Check if form has any data
+  const hasFormData = Object.keys(formData).some(key => {
+    const value = formData[key];
+    if (Array.isArray(value)) return value.length > 0;
+    return value && value.toString().trim() !== '';
+  });
 
   // Verify code via secure database function
   const handleCodeSubmit = async () => {
@@ -219,6 +306,11 @@ const BasvuruForm = () => {
       if (error) {
         console.error('Application submit error:', error);
         throw error;
+      }
+
+      // Clear draft on successful submit
+      if (draftKey) {
+        localStorage.removeItem(draftKey);
       }
 
       toast({
@@ -652,6 +744,60 @@ const BasvuruForm = () => {
                   {formTemplate.questions.length} soru · {formTemplate.questions.filter(q => q.required).length} zorunlu
                 </p>
               </motion.div>
+
+              {/* Save & Clear Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="bg-card/40 backdrop-blur-sm border border-border/30 rounded-xl p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Save className="w-4 h-4" />
+                    {lastSaved ? (
+                      <span>Son kayıt: {format(lastSaved, 'HH:mm')}</span>
+                    ) : (
+                      <span>Henüz kaydedilmedi</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={saveDraft}
+                      disabled={!hasFormData || justSaved}
+                      className={`border-primary/30 transition-all duration-300 ${
+                        justSaved 
+                          ? 'bg-primary/10 text-primary border-primary/50' 
+                          : 'text-primary hover:bg-primary/10'
+                      }`}
+                    >
+                      {justSaved ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                          Kaydedildi
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-1.5" />
+                          Cevapları Kaydet
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowClearConfirm(true)}
+                      disabled={!hasFormData}
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1.5" />
+                      Formu Temizle
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
 
@@ -682,23 +828,43 @@ const BasvuruForm = () => {
                     </p>
                   )}
                 </div>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!isFormValid() || isSubmitting}
-                  className="w-full sm:w-auto min-w-[200px] h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium shadow-lg shadow-primary/20"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Gönderiliyor...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5 mr-2" />
-                      Başvuruyu Gönder
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={saveDraft}
+                    disabled={!hasFormData || justSaved}
+                    className={`h-12 w-12 transition-all duration-300 ${
+                      justSaved 
+                        ? 'bg-primary/10 text-primary border-primary/50' 
+                        : 'border-primary/30 text-primary hover:bg-primary/10'
+                    }`}
+                    title={justSaved ? "Kaydedildi" : "Cevapları Kaydet"}
+                  >
+                    {justSaved ? (
+                      <CheckCircle2 className="w-5 h-5" />
+                    ) : (
+                      <Save className="w-5 h-5" />
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!isFormValid() || isSubmitting}
+                    className="w-full sm:w-auto min-w-[200px] h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium shadow-lg shadow-primary/20"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Gönderiliyor...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5 mr-2" />
+                        Başvuruyu Gönder
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -706,6 +872,27 @@ const BasvuruForm = () => {
       </main>
 
       <Footer />
+
+      {/* Clear Confirmation Dialog */}
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Formu Temizle</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tüm cevaplarınız silinecek. Bu işlem geri alınamaz. Emin misiniz?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={clearForm} 
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Evet, Temizle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
