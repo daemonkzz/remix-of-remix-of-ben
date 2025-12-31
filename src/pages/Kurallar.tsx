@@ -17,7 +17,10 @@ import { ReadingProgress } from "@/components/rules/ReadingProgress";
 import { MobileBackButton } from "@/components/rules/MobileBackButton";
 import { SearchHistoryDropdown } from "@/components/rules/SearchHistoryDropdown";
 import { KeyboardShortcutsHint } from "@/components/rules/KeyboardShortcutsHint";
-import { GlossarySection } from "@/components/rules/GlossarySection";
+import { IntegratedGlossary } from "@/components/rules/IntegratedGlossary";
+import { GlossarySidebarNav } from "@/components/rules/GlossarySidebarNav";
+import { RolePasiSection } from "@/components/rules/RolePasiSection";
+import { RolePasiSidebarNav } from "@/components/rules/RolePasiSidebarNav";
 
 // Hooks
 import {
@@ -421,6 +424,28 @@ const Kurallar = () => {
                       </AnimatePresence>
                     </div>
                   ))}
+                  
+                  {/* Glossary Sidebar Navigation */}
+                  <GlossarySidebarNav
+                    expandedCategories={expandedCategories}
+                    expandedSubCategories={expandedSubCategories}
+                    activeRule={activeRule}
+                    onToggleCategory={toggleCategory}
+                    onToggleSubCategory={toggleSubCategory}
+                    onScrollToRule={scrollToRule}
+                    searchQuery={searchQuery}
+                  />
+                  
+                  {/* Rol Pası Sidebar Navigation */}
+                  <RolePasiSidebarNav
+                    expandedCategories={expandedCategories}
+                    expandedSubCategories={expandedSubCategories}
+                    activeRule={activeRule}
+                    onToggleCategory={toggleCategory}
+                    onToggleSubCategory={toggleSubCategory}
+                    onScrollToRule={scrollToRule}
+                    searchQuery={searchQuery}
+                  />
                 </nav>
               </div>
             </motion.aside>
@@ -580,8 +605,26 @@ const Kurallar = () => {
                 ))
               )}
 
-              {/* Terimler Sözlüğü */}
-              <GlossarySection />
+              {/* Terimler Sözlüğü - Entegre Görünüm */}
+              <IntegratedGlossary
+                searchQuery={searchQuery}
+                expandedSubCategories={expandedSubCategories}
+                activeRule={activeRule}
+                onToggleSubCategory={toggleSubCategory}
+                onScrollToTerm={scrollToRule}
+                sectionRefs={sectionRefs}
+                setActiveRule={setActiveRule}
+              />
+
+              {/* Rol Pası Kuralları */}
+              <RolePasiSection
+                searchQuery={searchQuery}
+                expandedSubCategories={expandedSubCategories}
+                activeRule={activeRule}
+                onToggleSubCategory={toggleSubCategory}
+                sectionRefs={sectionRefs}
+                setActiveRule={setActiveRule}
+              />
 
               {/* Footer Note */}
               <motion.div
