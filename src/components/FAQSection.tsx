@@ -10,32 +10,36 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const faqItems = [
   {
-    question: "WILL WE REALLY BE LOCKED IN A ROOM?",
-    answer: "No, you won't actually be locked in. Safety is our top priority. All doors have emergency exits, and our game masters monitor the rooms at all times. You can leave whenever you need to."
+    question: "SUNUCUYA GİRİNCE ZORLA BİR SENARYOYA MI DAHİL OLACAĞIM?",
+    answer: "Hayır. Sunucuda zorunlu RP, zorla senaryo veya dayatma yoktur. Oyuncular kendi karakterlerini belirtilen kurallar koşulunda yazdıktan sonra yetkili onayı ile birlikte rahatça oynayabilir."
   },
   {
-    question: "WHAT DO WE DO IF WE GET STUCK AND CAN'T SOLVE A RIDDLE?",
-    answer: "Don't worry! Our game masters are always watching and ready to provide hints when needed. You can request a hint at any time through our in-room communication system."
+    question: "YENİ OYUNCULAR İÇİN SUNUCU ZOR MU?",
+    answer: "Hayır. Yeni başlayanlar için rehber sistemler ve destek ekibi bulunur. Deneyimsiz oyuncuların oyuna adapte olması özellikle desteklenir."
   },
   {
-    question: "HOW SCARY IS YOUR QUEST?",
-    answer: "Our rooms vary in intensity. Some have light thriller elements while others are purely puzzle-focused. We clearly label each room's scare level so you can choose what's comfortable for you."
+    question: "SUNUCUDA PAY-TO-WIN VAR MI?",
+    answer: "Hayır. Bağışlar yalnızca kozmetik ve RP kolaylaştırıcı unsurlar içerir. Hiçbir bağış oyuncuya haksız güç veya üstünlük sağlamaz."
   },
   {
-    question: "IS THE QUEST SUITABLE FOR CHILDREN?",
-    answer: "Yes! We have family-friendly rooms suitable for children aged 10 and up. Children under 14 must be accompanied by an adult. We recommend checking each room's difficulty rating."
+    question: "BU SUNUCUDA NASIL RP YAPMAM BEKLENİYOR?",
+    answer: "Bu sunucuda RP, karakterin aldığı kararların sonuç doğurması üzerine kuruludur. Yaptığınız her hareketin, verdiğiniz her kararın dünyada bir karşılığı vardır."
   },
   {
-    question: "HOW MANY PEOPLE CAN PARTICIPATE IN THE GAME?",
-    answer: "Our rooms accommodate 2-6 players, depending on the specific quest. We recommend 3-5 players for the optimal experience. Larger groups can book multiple rooms for a team competition!"
+    question: "TEK BAŞIMA OYNAYABİLİR MİYİM, YOKSA BİR GRUBA MI KATILMALIYIM?",
+    answer: "Tek başına da başlayabilirsiniz. Sunucu, solo RP'den fraksiyon RP'sine kadar farklı oyun tarzlarını destekler. Zamanla doğal şekilde gruplara dahil olmanız teşvik edilir."
   },
   {
-    question: "DO YOU NEED SKILLS OR FITNESS?",
-    answer: "No special skills or physical fitness required! Our puzzles rely on logic, observation, and teamwork. The rooms are accessible and don't require climbing or strenuous activity."
+    question: "SUNUCUDA ÖLÜM / KARAKTER KAYBI NASIL İŞLİYOR?",
+    answer: "Ölüm mekanikleri RP temellidir. Kalıcı karakter kaybı (CK) yalnızca ciddi RP süreçleri sonucunda gerçekleşir. Her durum kayıt altına alınır ve keyfi şekilde uygulanmaz."
   },
   {
-    question: "HOW ARE BOOKINGS AND PAYMENTS MADE?",
-    answer: "Book online through our website or call us directly. We accept all major credit cards, cash, and digital payment methods. A small deposit is required to confirm your booking."
+    question: "KURALLARI BİLMEDEN HATA YAPARSAM BAN YER MİYİM?",
+    answer: "Evet, mümkün. Sunucuya giriş yapan her oyuncu, kuralları okumuş ve kabul etmiş sayılır. RP'yi bozan, sunucu düzenine zarar veren veya kasıtlı olmasa bile ciddi ihlal oluşturan durumlarda doğrudan yaptırım uygulanabilir."
+  },
+  {
+    question: "SUNUCU HİKÂYESİ ZORUNLU MU, KENDİ HİKÂYEMİ YAZABİLİR MİYİM?",
+    answer: "Sunucunun bir ana lore'u vardır. Ancak her oyuncu kendi karakter hikâyesini özgürce yazar. Lore, RP'yi kısıtlamak için değil, derinleştirmek için vardır."
   }
 ];
 
