@@ -456,8 +456,14 @@ const Admin = () => {
     return type;
   };
 
+  // Get user filter from query params
+  const userFilter = searchParams.get('user');
+  
   // Filter applications
   const filteredApplications = applications.filter(app => {
+    // First filter by user if specified
+    if (userFilter && app.user_id !== userFilter) return false;
+    // Then filter by type
     if (applicationFilter === 'all') return true;
     const formType = getFormTypeByFormId(app.type);
     return formType === applicationFilter;
@@ -566,8 +572,25 @@ const Admin = () => {
           <div>
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Başvurular</h2>
-                <p className="text-muted-foreground">Tüm başvuruları görüntüle ve yönet</p>
+                <h2 className="text-2xl font-bold text-foreground">
+                  {userFilter ? 'Kullanıcı Başvuruları' : 'Başvurular'}
+                </h2>
+                <p className="text-muted-foreground">
+                  {userFilter 
+                    ? `Bu kullanıcının ${filteredApplications.length} başvurusu gösteriliyor`
+                    : 'Tüm başvuruları görüntüle ve yönet'
+                  }
+                </p>
+                {userFilter && (
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="px-0 h-auto text-primary"
+                    onClick={() => setSearchParams({ tab: 'basvurular' })}
+                  >
+                    ← Tüm başvuruları göster
+                  </Button>
+                )}
               </div>
               
               {/* Application Filter */}

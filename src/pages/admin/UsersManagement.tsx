@@ -158,11 +158,21 @@ const UsersManagement = () => {
 
   const handleSendDiscordDm = async () => {
     if (!selectedUser?.discord_id || !discordMessage.trim()) return;
+    
+    // Discord ID numeric olmalı (snowflake ID)
+    const discordId = selectedUser.discord_id;
+    const isNumericId = /^\d{17,19}$/.test(discordId);
+    
+    if (!isNumericId) {
+      toast.error('Discord ID geçersiz formatı. Numeric Discord ID gerekli (örn: 123456789012345678). Kullanıcı adı (örn: daemonkz#0) değil, numeric ID kullanılmalı.');
+      return;
+    }
+    
     setIsSending(true);
     try {
       const { error } = await supabase.functions.invoke('send-discord-dm', {
         body: {
-          discord_id: selectedUser.discord_id,
+          discord_id: discordId,
           message: discordMessage,
         },
       });
