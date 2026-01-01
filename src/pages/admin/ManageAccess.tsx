@@ -11,7 +11,8 @@ import {
   Unlock,
   Loader2,
   Copy,
-  Check
+  Check,
+  Eye
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,8 @@ const ManageAccessContent: React.FC = () => {
   const [totpSecret, setTotpSecret] = useState<string | null>(null);
   const [secretCopied, setSecretCopied] = useState(false);
   const [secretWarningShown, setSecretWarningShown] = useState(false);
+  const [viewingQrUserId, setViewingQrUserId] = useState<string | null>(null);
+  const [qrModalUsername, setQrModalUsername] = useState<string | null>(null);
 
   // Modal kapandığında hassas verileri temizle
   const handleQrModalClose = (open: boolean) => {
@@ -94,6 +97,8 @@ const ManageAccessContent: React.FC = () => {
       setTotpSecret(null);
       setSecretCopied(false);
       setSecretWarningShown(false);
+      setViewingQrUserId(null);
+      setQrModalUsername(null);
     }
     setQrModalOpen(open);
   };
@@ -396,6 +401,56 @@ const ManageAccessContent: React.FC = () => {
     }
   };
 
+  // View existing QR code (for already provisioned users)
+  const handleViewQR = async (userId: string, username: string | null) => {
+    setViewingQrUserId(userId);
+    try {
+      // Get the existing secret from database
+      const { data, error } = await supabase
+        .from('admin_2fa_settings')
+        .select('totp_secret')
+        .eq('user_id', userId)
+        .single();
+
+      if (error || !data?.totp_secret) {
+        toast.error('2FA bilgisi bulunamadı');
+        return;
+      }
+
+      const secret = data.totp_secret;
+
+      // Create OTP Auth URI using the library function
+      const otpAuthUri = getTOTPAuthUri({
+        secret,
+        issuer: 'HayalRP Admin',
+        accountName: username || 'Admin',
+        algorithm: 'SHA-1',
+        digits: 6,
+        period: 30,
+      });
+
+      // Generate QR code
+      const qrDataUrl = await QRCode.toDataURL(otpAuthUri, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#ffffff',
+          light: '#00000000',
+        },
+      });
+
+      // Show QR modal
+      setQrCodeUrl(qrDataUrl);
+      setTotpSecret(secret);
+      setQrModalUsername(username);
+      setQrModalOpen(true);
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('View QR error:', error);
+      toast.error('QR kodu görüntülenirken hata oluştu');
+    } finally {
+      setViewingQrUserId(null);
+    }
+  };
   // Unblock user
   const handleUnblock = async () => {
     if (!unblockingUserId) return;
@@ -580,7 +635,26 @@ const ManageAccessContent: React.FC = () => {
                     <TableCell>{getStatusBadge(item)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Provision Button */}
+                        {/* View QR Button - for provisioned users */}
+                        {item.is_provisioned && !item.is_blocked && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewQR(item.user_id, item.profile?.username || null)}
+                            disabled={viewingQrUserId === item.user_id}
+                          >
+                            {viewingQrUserId === item.user_id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Eye className="w-4 h-4 mr-1" />
+                                QR Görüntüle
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {/* Provision Button - for not provisioned users */}
                         {!item.is_provisioned && (
                           <Button
                             variant="outline"
@@ -636,6 +710,9 @@ const ManageAccessContent: React.FC = () => {
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="w-5 h-5" />
               2FA QR Kodu
+              {qrModalUsername && (
+                <Badge variant="outline" className="ml-2">{qrModalUsername}</Badge>
+              )}
             </DialogTitle>
             <DialogDescription>
               Bu QR kodu authenticator uygulamasıyla tarayın
