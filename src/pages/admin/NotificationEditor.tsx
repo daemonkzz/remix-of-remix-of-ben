@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminEditorState } from '@/contexts/AdminEditorStateContext';
 import { toast } from 'sonner';
 import { 
   Bell, 
@@ -31,11 +32,10 @@ interface UserProfile {
   avatar_url: string | null;
 }
 
-const DRAFT_KEY = 'notificationeditor_draft';
-
 const NotificationEditorContent = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { getNotificationEditorState, setNotificationEditorState, clearNotificationEditorState } = useAdminEditorState();
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -49,27 +49,22 @@ const NotificationEditorContent = () => {
   
   const initialLoadRef = useRef(false);
 
-  // Auto-load draft on mount (silent)
+  // Load from context on mount
   useEffect(() => {
     if (initialLoadRef.current) return;
     initialLoadRef.current = true;
     
-    const savedDraft = localStorage.getItem(DRAFT_KEY);
-    if (savedDraft) {
-      try {
-        const draft = JSON.parse(savedDraft);
-        setTitle(draft.title || '');
-        setContent(draft.content || '');
-        setTargetType(draft.targetType || 'all');
-        setSelectedUsers(draft.selectedUsers || []);
-        toast.info('Kaldığınız yerden devam ediyorsunuz', { duration: 2000 });
-      } catch {
-        localStorage.removeItem(DRAFT_KEY);
-      }
+    const contextState = getNotificationEditorState();
+    if (contextState) {
+      setTitle(contextState.title);
+      setContent(contextState.content);
+      setTargetType(contextState.targetType);
+      setSelectedUsers(contextState.selectedUsers);
+      setHasUnsavedChanges(true);
     }
-  }, []);
+  }, [getNotificationEditorState]);
 
-  // Auto-save to localStorage
+  // Save to context on every change
   useEffect(() => {
     if (!initialLoadRef.current) return;
     
@@ -77,17 +72,14 @@ const NotificationEditorContent = () => {
     setHasUnsavedChanges(hasContent);
     
     if (hasContent) {
-      const timeoutId = setTimeout(() => {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          title,
-          content,
-          targetType,
-          selectedUsers,
-        }));
-      }, 1000);
-      return () => clearTimeout(timeoutId);
+      setNotificationEditorState({
+        title,
+        content,
+        targetType,
+        selectedUsers,
+      });
     }
-  }, [title, content, targetType, selectedUsers]);
+  }, [title, content, targetType, selectedUsers, setNotificationEditorState]);
 
   // Browser close protection
   useEffect(() => {
@@ -196,7 +188,7 @@ const NotificationEditorContent = () => {
         if (recipientError) throw recipientError;
       }
 
-      localStorage.removeItem(DRAFT_KEY);
+      clearNotificationEditorState();
       setHasUnsavedChanges(false);
       
       toast.success(
@@ -211,7 +203,7 @@ const NotificationEditorContent = () => {
     } finally {
       setIsSending(false);
     }
-  }, [title, content, targetType, selectedUsers, user?.id, navigate]);
+  }, [title, content, targetType, selectedUsers, user?.id, navigate, clearNotificationEditorState]);
 
   return (
     <div className="p-8 max-w-2xl mx-auto">

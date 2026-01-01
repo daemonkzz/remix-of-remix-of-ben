@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminEditorState } from '@/contexts/AdminEditorStateContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -43,7 +44,6 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { RuleEditorCard, RuleFormatGuide } from '@/components/admin/rules';
 import { RuleContentRenderer } from '@/components/rules/RuleContentRenderer';
 import { NavigationGuard } from '@/components/admin/NavigationGuard';
-
 import { UnsavedIndicator } from '@/components/admin/UnsavedIndicator';
 import type { MainCategory, SubCategory, Rule } from '@/types/rules';
 import { kazeRulesData } from '@/data/rulesData';
@@ -52,10 +52,9 @@ import { useDiscordNotification } from '@/hooks/useDiscordNotification';
 // Default rules data to import
 const defaultRulesData: MainCategory[] = kazeRulesData;
 
-const DRAFT_KEY = 'ruleseditor_draft';
-
 const RulesEditorContent = () => {
   const { user } = useAuth();
+  const { getRulesEditorState, setRulesEditorState, clearRulesEditorState } = useAdminEditorState();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('editor');
@@ -69,7 +68,6 @@ const RulesEditorContent = () => {
   // Draft state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const initialLoadRef = useRef(false);
-  const lastSavedDataRef = useRef<string>('');
   
   // UI State
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -82,47 +80,34 @@ const RulesEditorContent = () => {
   const [previewExpandedCats, setPreviewExpandedCats] = useState<string[]>([]);
   const [previewExpandedSubs, setPreviewExpandedSubs] = useState<string[]>([]);
 
-  // Auto-load draft on mount and load rules
+  // Load from context or DB on mount
   useEffect(() => {
-    const savedDraft = localStorage.getItem(DRAFT_KEY);
-    if (savedDraft) {
-      try {
-        const parsedData = JSON.parse(savedDraft) as MainCategory[];
-        setCategories(parsedData);
-        setHasUnsavedChanges(true);
-        lastSavedDataRef.current = savedDraft;
-        toast.info('Kaldığınız yerden devam ediyorsunuz', { duration: 2000 });
-        // Load original from DB for comparison
-        loadRules(true);
-        return;
-      } catch {
-        localStorage.removeItem(DRAFT_KEY);
-      }
+    const contextState = getRulesEditorState();
+    if (contextState) {
+      setCategories(contextState.categories);
+      setHasUnsavedChanges(true);
+      // Load original from DB for comparison
+      loadRules(true);
+      return;
     }
-    // No draft, load normally
+    // No context state, load normally
     loadRules();
   }, []);
 
-  // Auto-save to localStorage
+  // Save to context on every change
   useEffect(() => {
     if (!initialLoadRef.current) return;
     
     const currentDataStr = JSON.stringify(categories);
     const originalDataStr = JSON.stringify(originalCategories);
     
-    if (currentDataStr !== originalDataStr && currentDataStr !== lastSavedDataRef.current) {
+    if (currentDataStr !== originalDataStr) {
       setHasUnsavedChanges(true);
-      
-      const timeoutId = setTimeout(() => {
-        localStorage.setItem(DRAFT_KEY, currentDataStr);
-        lastSavedDataRef.current = currentDataStr;
-      }, 1000);
-      
-      return () => clearTimeout(timeoutId);
-    } else if (currentDataStr === originalDataStr) {
+      setRulesEditorState({ categories });
+    } else {
       setHasUnsavedChanges(false);
     }
-  }, [categories, originalCategories]);
+  }, [categories, originalCategories, setRulesEditorState]);
 
   // Browser/tab close protection
   useEffect(() => {
@@ -157,13 +142,8 @@ const RulesEditorContent = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSaving, categories, rulesId, user?.id]);
 
-  const clearDraft = useCallback(() => {
-    localStorage.removeItem(DRAFT_KEY);
-    lastSavedDataRef.current = '';
-  }, []);
-
-  const loadRules = async (skipDraftPrompt = false) => {
-    if (!skipDraftPrompt) {
+  const loadRules = async (skipSetCategories = false) => {
+    if (!skipSetCategories) {
       setIsLoading(true);
     }
     try {
@@ -182,7 +162,7 @@ const RulesEditorContent = () => {
       if (data) {
         setRulesId(data.id);
         const loadedCategories = (data.data as MainCategory[]) || [];
-        if (!skipDraftPrompt) {
+        if (!skipSetCategories) {
           setCategories(loadedCategories);
         }
         setOriginalCategories(JSON.parse(JSON.stringify(loadedCategories)));
@@ -193,7 +173,7 @@ const RulesEditorContent = () => {
       console.error('Error:', error);
       toast.error('Kurallar yüklenirken hata oluştu');
     } finally {
-      if (!skipDraftPrompt) {
+      if (!skipSetCategories) {
         setIsLoading(false);
       }
     }
@@ -222,14 +202,14 @@ const RulesEditorContent = () => {
       setLastUpdated(new Date().toISOString());
       setOriginalCategories(JSON.parse(JSON.stringify(categories)));
       setHasUnsavedChanges(false);
-      clearDraft();
+      clearRulesEditorState();
     } catch (error) {
       console.error('Save error:', error);
       toast.error('Kurallar kaydedilirken hata oluştu');
     } finally {
       setIsSaving(false);
     }
-  }, [categories, rulesId, user?.id, clearDraft]);
+  }, [categories, rulesId, user?.id, clearRulesEditorState]);
 
   // Find updated rules by comparing with original categories
   const updatedRules = useMemo(() => {
@@ -458,7 +438,6 @@ const RulesEditorContent = () => {
       {/* Navigation Guard */}
       <NavigationGuard when={hasUnsavedChanges} />
 
-
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
@@ -498,59 +477,71 @@ const RulesEditorContent = () => {
             onClick={() => setImportConfirm(true)}
           >
             <Download className="w-4 h-4 mr-2" />
-            Varsayılanları Yükle
+            Varsayılanları İçe Aktar
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !hasUnsavedChanges}
+            className="gap-2"
           >
             {isSaving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4" />
             )}
             Kaydet
           </Button>
         </div>
       </div>
 
+      {/* Last Updated */}
+      {lastUpdated && (
+        <p className="text-sm text-muted-foreground mb-4">
+          Son güncelleme: {formatDate(lastUpdated)}
+        </p>
+      )}
+
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="editor">
-            <Pencil className="w-4 h-4 mr-2" />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="editor" className="gap-2">
+            <Pencil className="w-4 h-4" />
             Düzenleyici
           </TabsTrigger>
-          <TabsTrigger value="preview">
-            <Eye className="w-4 h-4 mr-2" />
+          <TabsTrigger value="preview" className="gap-2">
+            <Eye className="w-4 h-4" />
             Önizleme
           </TabsTrigger>
         </TabsList>
 
         {/* Editor Tab */}
         <TabsContent value="editor" className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={addCategory}>
-              <Plus className="w-4 h-4 mr-2" />
+          <div className="flex justify-end mb-4">
+            <Button onClick={addCategory} className="gap-2">
+              <Plus className="w-4 h-4" />
               Kategori Ekle
             </Button>
           </div>
 
-          <ScrollArea className="h-[calc(100vh-300px)]">
+          <ScrollArea className="h-[calc(100vh-320px)]">
             <div className="space-y-4 pr-4">
               {categories.map((category) => (
-                <div key={category.id} className="border border-border rounded-lg bg-card">
+                <div
+                  key={category.id}
+                  className="border border-border rounded-lg bg-card overflow-hidden"
+                >
+                  {/* Category Header */}
                   <Collapsible
                     open={expandedCategories.has(category.id)}
                     onOpenChange={() => toggleCategory(category.id)}
                   >
                     <CollapsibleTrigger asChild>
-                      <div className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50">
-                        <GripVertical className="w-5 h-5 text-muted-foreground" />
+                      <div className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                        <GripVertical className="w-4 h-4 text-muted-foreground" />
                         {expandedCategories.has(category.id) ? (
-                          <ChevronDown className="w-5 h-5" />
+                          <ChevronDown className="w-4 h-4" />
                         ) : (
-                          <ChevronRight className="w-5 h-5" />
+                          <ChevronRight className="w-4 h-4" />
                         )}
                         <FolderOpen className="w-5 h-5 text-primary" />
                         
@@ -565,14 +556,14 @@ const RulesEditorContent = () => {
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
-                          <span className="font-semibold text-lg flex-1">{category.title}</span>
+                          <span className="font-semibold text-lg">{category.title}</span>
                         )}
-
-                        <Badge variant="secondary">
+                        
+                        <Badge variant="secondary" className="ml-auto">
                           {category.subCategories.length} alt kategori
                         </Badge>
-
-                        <div className="flex items-center gap-1">
+                        
+                        <div className="flex gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -598,33 +589,37 @@ const RulesEditorContent = () => {
                     </CollapsibleTrigger>
 
                     <CollapsibleContent>
-                      <div className="px-4 pb-4 space-y-3">
+                      <div className="p-4 pt-0 space-y-3">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => addSubCategory(category.id)}
-                          className="ml-10"
+                          className="gap-2"
                         >
-                          <Plus className="w-4 h-4 mr-2" />
+                          <Plus className="w-3 h-3" />
                           Alt Kategori Ekle
                         </Button>
 
+                        {/* SubCategories */}
                         {category.subCategories.map((subCategory) => (
-                          <div key={subCategory.id} className="ml-10 border border-border rounded-lg bg-muted/30">
+                          <div
+                            key={subCategory.id}
+                            className="ml-6 border border-border/50 rounded-lg bg-background"
+                          >
                             <Collapsible
                               open={expandedSubCategories.has(subCategory.id)}
                               onOpenChange={() => toggleSubCategory(subCategory.id)}
                             >
                               <CollapsibleTrigger asChild>
-                                <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50">
-                                  <GripVertical className="w-4 h-4 text-muted-foreground" />
+                                <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors">
+                                  <GripVertical className="w-3 h-3 text-muted-foreground" />
                                   {expandedSubCategories.has(subCategory.id) ? (
-                                    <ChevronDown className="w-4 h-4" />
+                                    <ChevronDown className="w-3 h-3" />
                                   ) : (
-                                    <ChevronRight className="w-4 h-4" />
+                                    <ChevronRight className="w-3 h-3" />
                                   )}
-                                  <BookOpen className="w-4 h-4 text-primary" />
-
+                                  <BookOpen className="w-4 h-4 text-muted-foreground" />
+                                  
                                   {editingItem?.type === 'subcategory' && editingItem.id === subCategory.id ? (
                                     <Input
                                       value={subCategory.title}
@@ -632,22 +627,22 @@ const RulesEditorContent = () => {
                                       onBlur={() => setEditingItem(null)}
                                       onKeyDown={(e) => e.key === 'Enter' && setEditingItem(null)}
                                       autoFocus
-                                      className="max-w-xs"
+                                      className="max-w-xs h-8"
                                       onClick={(e) => e.stopPropagation()}
                                     />
                                   ) : (
-                                    <span className="font-medium flex-1">{subCategory.title}</span>
+                                    <span className="font-medium">{subCategory.title}</span>
                                   )}
-
-                                  <Badge variant="outline">
+                                  
+                                  <Badge variant="outline" className="ml-auto text-xs">
                                     {subCategory.rules.length} kural
                                   </Badge>
-
-                                  <div className="flex items-center gap-1">
+                                  
+                                  <div className="flex gap-1">
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8"
+                                      className="h-7 w-7"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setEditingItem({ type: 'subcategory', id: subCategory.id });
@@ -658,10 +653,14 @@ const RulesEditorContent = () => {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8"
+                                      className="h-7 w-7"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setDeleteConfirm({ type: 'subcategory', id: subCategory.id, parentId: category.id });
+                                        setDeleteConfirm({ 
+                                          type: 'subcategory', 
+                                          id: subCategory.id, 
+                                          parentId: category.id 
+                                        });
                                       }}
                                     >
                                       <Trash2 className="w-3 h-3 text-destructive" />
@@ -671,38 +670,46 @@ const RulesEditorContent = () => {
                               </CollapsibleTrigger>
 
                               <CollapsibleContent>
-                                <div className="px-3 pb-3 space-y-2">
-                                  <Textarea
-                                    value={subCategory.description}
-                                    onChange={(e) => updateSubCategory(category.id, subCategory.id, { description: e.target.value })}
-                                    placeholder="Alt kategori açıklaması..."
-                                    className="ml-10 text-sm"
-                                    rows={2}
-                                  />
+                                <div className="p-3 pt-0 space-y-2">
+                                  {/* SubCategory Description */}
+                                  <div className="ml-6">
+                                    <Textarea
+                                      value={subCategory.description}
+                                      onChange={(e) => updateSubCategory(category.id, subCategory.id, { description: e.target.value })}
+                                      placeholder="Alt kategori açıklaması..."
+                                      className="text-sm h-16 resize-none"
+                                    />
+                                  </div>
 
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => addRule(category.id, subCategory.id)}
-                                    className="ml-10"
+                                    className="gap-2 ml-6"
                                   >
-                                    <Plus className="w-4 h-4 mr-2" />
+                                    <Plus className="w-3 h-3" />
                                     Kural Ekle
                                   </Button>
 
-                                  {subCategory.rules.map((rule) => (
-                                    <div key={rule.id} className="ml-10">
+                                  {/* Rules */}
+                                  <div className="ml-6 space-y-2">
+                                    {subCategory.rules.map((rule) => (
                                       <RuleEditorCard
+                                        key={rule.id}
                                         rule={rule}
                                         isEditing={editingItem?.type === 'rule' && editingItem.id === rule.id}
                                         onEdit={() => setEditingItem({ type: 'rule', id: rule.id })}
-                                        onCancelEdit={() => setEditingItem(null)}
+                                        onSave={() => setEditingItem(null)}
                                         onUpdate={(updates) => updateRule(category.id, subCategory.id, rule.id, updates)}
-                                        onDelete={() => setDeleteConfirm({ type: 'rule', id: rule.id, parentId: category.id, subParentId: subCategory.id })}
-                                        formatDate={formatDate}
+                                        onDelete={() => setDeleteConfirm({
+                                          type: 'rule',
+                                          id: rule.id,
+                                          parentId: category.id,
+                                          subParentId: subCategory.id,
+                                        })}
                                       />
-                                    </div>
-                                  ))}
+                                    ))}
+                                  </div>
                                 </div>
                               </CollapsibleContent>
                             </Collapsible>
@@ -715,12 +722,12 @@ const RulesEditorContent = () => {
               ))}
 
               {categories.length === 0 && (
-                <div className="text-center py-12 bg-card rounded-lg border border-border">
-                  <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">Henüz kural bulunmuyor</p>
-                  <Button onClick={addCategory}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    İlk Kategoriyi Oluştur
+                <div className="text-center py-12 text-muted-foreground">
+                  <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Henüz kategori eklenmemiş</p>
+                  <Button onClick={addCategory} className="mt-4 gap-2">
+                    <Plus className="w-4 h-4" />
+                    İlk Kategoriyi Ekle
                   </Button>
                 </div>
               )}
@@ -730,72 +737,72 @@ const RulesEditorContent = () => {
 
         {/* Preview Tab */}
         <TabsContent value="preview">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h3 className="text-xl font-bold mb-6 text-foreground">Kurallar Önizleme</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Bu önizleme sitedeki görünümle birebir aynıdır. Tüm formatlar (örnek kutuları, alıntılar, notlar, kalın yazı vb.) doğru şekilde görüntülenir.
-            </p>
-            <div className="space-y-4">
-              {categories.map((category) => (
-                <div key={category.id} className="border border-border rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => togglePreviewCat(category.id)}
-                    className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors"
+          <div className="bg-background border border-border rounded-lg p-6">
+            <h3 className="text-lg font-semibold mb-4">Önizleme</h3>
+            <ScrollArea className="h-[calc(100vh-400px)]">
+              <div className="space-y-4 pr-4">
+                {categories.map((category) => (
+                  <Collapsible
+                    key={category.id}
+                    open={previewExpandedCats.includes(category.id)}
+                    onOpenChange={() => togglePreviewCat(category.id)}
                   >
-                    <span className="font-semibold text-lg">{category.id}. {category.title}</span>
-                    {previewExpandedCats.includes(category.id) ? (
-                      <ChevronDown className="w-5 h-5" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5" />
-                    )}
-                  </button>
-
-                  {previewExpandedCats.includes(category.id) && (
-                    <div className="p-4 space-y-3">
-                      {category.subCategories.map((subCategory) => (
-                        <div key={subCategory.id} className="border border-border rounded-lg overflow-hidden">
-                          <button
-                            onClick={() => togglePreviewSub(subCategory.id)}
-                            className="w-full flex items-center justify-between p-3 bg-background hover:bg-muted/30 transition-colors"
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center gap-3 p-4 bg-card rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                        {previewExpandedCats.includes(category.id) ? (
+                          <ChevronDown className="w-5 h-5" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5" />
+                        )}
+                        <span className="font-bold text-lg">{category.title}</span>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-4 mt-2 space-y-3">
+                        {category.subCategories.map((sub) => (
+                          <Collapsible
+                            key={sub.id}
+                            open={previewExpandedSubs.includes(sub.id)}
+                            onOpenChange={() => togglePreviewSub(sub.id)}
                           >
-                            <span className="font-medium">{subCategory.id} {subCategory.title}</span>
-                            {previewExpandedSubs.includes(subCategory.id) ? (
-                              <ChevronDown className="w-4 h-4" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4" />
-                            )}
-                          </button>
-
-                          {previewExpandedSubs.includes(subCategory.id) && (
-                            <div className="p-4 space-y-4">
-                              {subCategory.description && (
-                                <p className="text-sm text-muted-foreground">{subCategory.description}</p>
-                              )}
-                              {subCategory.rules.map((rule) => (
-                                <div key={rule.id} className="p-4 bg-muted/20 rounded-xl border border-border/50">
-                                  <div className="flex items-start justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-semibold text-primary">{rule.id}</span>
-                                      <span className="font-semibold text-foreground">{rule.title}</span>
-                                    </div>
-                                    {rule.lastUpdate && (
+                            <CollapsibleTrigger className="w-full">
+                              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                {previewExpandedSubs.includes(sub.id) ? (
+                                  <ChevronDown className="w-4 h-4" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4" />
+                                )}
+                                <span className="font-medium">{sub.title}</span>
+                              </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="ml-4 mt-2 space-y-2">
+                                <p className="text-sm text-muted-foreground px-3">{sub.description}</p>
+                                {sub.rules.map((rule) => (
+                                  <div key={rule.id} className="p-3 bg-card rounded-lg border border-border">
+                                    <div className="flex items-start gap-2">
                                       <Badge variant="outline" className="text-xs shrink-0">
-                                        {formatDate(rule.lastUpdate)}
+                                        {rule.id}
                                       </Badge>
-                                    )}
+                                      <div>
+                                        <p className="font-medium">{rule.title}</p>
+                                        <div className="text-sm text-muted-foreground mt-1">
+                                          <RuleContentRenderer content={rule.description} />
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <RuleContentRenderer content={rule.description} />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                                ))}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
         </TabsContent>
       </Tabs>
@@ -806,15 +813,14 @@ const RulesEditorContent = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Silmek istediğinize emin misiniz?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteConfirm?.type === 'category' && 'Bu kategori ve içindeki tüm alt kategoriler ve kurallar silinecektir.'}
-              {deleteConfirm?.type === 'subcategory' && 'Bu alt kategori ve içindeki tüm kurallar silinecektir.'}
-              {deleteConfirm?.type === 'rule' && 'Bu kural kalıcı olarak silinecektir.'}
+              Bu işlem geri alınamaz. {deleteConfirm?.type === 'category' && 'Bu kategori ve altındaki tüm alt kategoriler ve kurallar silinecek.'}
+              {deleteConfirm?.type === 'subcategory' && 'Bu alt kategori ve altındaki tüm kurallar silinecek.'}
+              {deleteConfirm?.type === 'rule' && 'Bu kural silinecek.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (deleteConfirm?.type === 'category') {
                   deleteCategory(deleteConfirm.id);
@@ -824,6 +830,7 @@ const RulesEditorContent = () => {
                   deleteRule(deleteConfirm.parentId, deleteConfirm.subParentId, deleteConfirm.id);
                 }
               }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Sil
             </AlertDialogAction>
@@ -835,15 +842,15 @@ const RulesEditorContent = () => {
       <AlertDialog open={importConfirm} onOpenChange={setImportConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Varsayılan kuralları yükle</AlertDialogTitle>
+            <AlertDialogTitle>Varsayılan Kuralları İçe Aktar</AlertDialogTitle>
             <AlertDialogDescription>
-              Mevcut kurallar silinecek ve varsayılan kurallar yüklenecektir. Bu işlem geri alınamaz.
+              Bu işlem mevcut tüm kuralları varsayılan kurallarla değiştirecek. Bu işlem geri alınamaz.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
             <AlertDialogAction onClick={handleImportDefaults}>
-              Yükle
+              İçe Aktar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

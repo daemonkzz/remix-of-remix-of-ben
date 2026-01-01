@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AdminSessionProvider } from "./contexts/AdminSessionContext";
+import { AdminEditorStateProvider } from "./contexts/AdminEditorStateContext";
 import { AdminRouteGuard } from "./components/admin/AdminRouteGuard";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import PageLoader from "./components/PageLoader";
@@ -73,27 +74,29 @@ const RouteEffects = () => {
           path="/admin/*"
           element={
             <AdminSessionProvider>
-              <AdminRouteGuard>
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    <Route index element={<Admin />} />
-                    <Route path="basvuru/:id" element={<AdminBasvuruDetay />} />
-                    <Route path="form-builder" element={<FormBuilder />} />
-                    <Route path="form-builder/:id" element={<FormBuilder />} />
-                    <Route path="update-editor" element={<UpdateEditor />} />
-                    <Route path="update-editor/:id" element={<UpdateEditor />} />
-                    <Route path="rules-editor" element={<RulesEditor />} />
-                    <Route path="gallery" element={<Gallery />} />
-                    <Route path="manage-access" element={<ManageAccess />} />
-                    <Route path="notification-editor" element={<NotificationEditor />} />
-                    <Route path="whiteboard-editor" element={<WhiteboardEditor />} />
-                    <Route path="glossary-editor" element={<GlossaryEditor />} />
-                    <Route path="users" element={<UsersManagement />} />
-                    <Route path="permissions" element={<PermissionsEditor />} />
-                    <Route path="locked" element={<Locked />} />
-                  </Routes>
-                </Suspense>
-              </AdminRouteGuard>
+              <AdminEditorStateProvider>
+                <AdminRouteGuard>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route index element={<Admin />} />
+                      <Route path="basvuru/:id" element={<AdminBasvuruDetay />} />
+                      <Route path="form-builder" element={<FormBuilder />} />
+                      <Route path="form-builder/:id" element={<FormBuilder />} />
+                      <Route path="update-editor" element={<UpdateEditor />} />
+                      <Route path="update-editor/:id" element={<UpdateEditor />} />
+                      <Route path="rules-editor" element={<RulesEditor />} />
+                      <Route path="gallery" element={<Gallery />} />
+                      <Route path="manage-access" element={<ManageAccess />} />
+                      <Route path="notification-editor" element={<NotificationEditor />} />
+                      <Route path="whiteboard-editor" element={<WhiteboardEditor />} />
+                      <Route path="glossary-editor" element={<GlossaryEditor />} />
+                      <Route path="users" element={<UsersManagement />} />
+                      <Route path="permissions" element={<PermissionsEditor />} />
+                      <Route path="locked" element={<Locked />} />
+                    </Routes>
+                  </Suspense>
+                </AdminRouteGuard>
+              </AdminEditorStateProvider>
             </AdminSessionProvider>
           }
         />

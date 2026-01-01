@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminEditorState } from '@/contexts/AdminEditorStateContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -29,9 +30,7 @@ import {
 import { RichTextEditor } from '@/components/admin/updates/RichTextEditor';
 import { UpdatePreview } from '@/components/admin/updates/UpdatePreview';
 import { NavigationGuard } from '@/components/admin/NavigationGuard';
-import { DraftPrompt } from '@/components/admin/DraftPrompt';
 import { UnsavedIndicator } from '@/components/admin/UnsavedIndicator';
-import { useFormDraft } from '@/hooks/useFormDraft';
 import type { UpdateData, ContentBlock, UpdateCategory } from '@/types/update';
 import { defaultUpdateData } from '@/types/update';
 import { useDiscordNotification } from '@/hooks/useDiscordNotification';
@@ -40,6 +39,7 @@ const UpdateEditor = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user, isLoading: authLoading } = useAuth();
+  const { getUpdateEditorState, setUpdateEditorState, clearUpdateEditorState } = useAdminEditorState();
   const isEditMode = Boolean(id);
 
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -51,21 +51,11 @@ const UpdateEditor = () => {
 
   const { sendUpdateNotification, isSending: isDiscordSending } = useDiscordNotification();
 
-  // Draft management
-  const draftKey = `updateeditor_${id || 'new'}`;
-  const {
-    data: updateData,
-    setData: setUpdateData,
-    hasUnsavedChanges,
-    markAsSaved,
-    loadDraft,
-    ignoreDraft,
-    isDraftPromptPending,
-  } = useFormDraft<UpdateData>({
-    key: draftKey,
-    initialData: { ...defaultUpdateData },
-    autoLoad: true,
-  });
+  // Form data state
+  const [updateData, setUpdateData] = useState<UpdateData>({ ...defaultUpdateData });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const originalDataRef = useRef<string>('');
+  const stateKey = id || 'new';
 
   // Check admin role
   useEffect(() => {
@@ -102,14 +92,37 @@ const UpdateEditor = () => {
     checkAdminRole();
   }, [user, authLoading, navigate]);
 
-  // Load existing update if editing
+  // Load data: First check context, then DB
   useEffect(() => {
-    if (isAuthorized && isEditMode && id) {
+    if (!isAuthorized) return;
+    
+    // Check context for existing state
+    const contextState = getUpdateEditorState(stateKey);
+    if (contextState) {
+      setUpdateData({
+        ...defaultUpdateData,
+        title: contextState.title,
+        subtitle: contextState.subtitle,
+        category: contextState.category as UpdateCategory,
+        version: contextState.version,
+        cover_image_url: contextState.coverImageUrl,
+        content: contextState.content,
+        is_published: contextState.isPublished,
+      });
+      setHasUnsavedChanges(true);
+      setIsDataLoaded(true);
+      return;
+    }
+    
+    // No context state, load from DB if editing
+    if (isEditMode && id) {
       loadUpdate(id);
-    } else if (isAuthorized && !isEditMode) {
+    } else {
+      setUpdateData({ ...defaultUpdateData });
+      originalDataRef.current = JSON.stringify(defaultUpdateData);
       setIsDataLoaded(true);
     }
-  }, [isAuthorized, isEditMode, id]);
+  }, [isAuthorized, isEditMode, id, stateKey]);
 
   const loadUpdate = async (updateId: string) => {
     setIsLoading(true);
@@ -127,7 +140,7 @@ const UpdateEditor = () => {
         return;
       }
 
-      setUpdateData({
+      const loadedData: UpdateData = {
         id: data.id,
         title: data.title,
         subtitle: data.subtitle || '',
@@ -140,7 +153,10 @@ const UpdateEditor = () => {
         published_at: data.published_at || undefined,
         created_at: data.created_at,
         updated_at: data.updated_at,
-      });
+      };
+      
+      setUpdateData(loadedData);
+      originalDataRef.current = JSON.stringify(loadedData);
       setIsDataLoaded(true);
     } catch (error) {
       console.error('Load error:', error);
@@ -149,6 +165,39 @@ const UpdateEditor = () => {
       setIsLoading(false);
     }
   };
+
+  // Save to context on every change
+  useEffect(() => {
+    if (!isDataLoaded) return;
+    
+    const currentDataStr = JSON.stringify(updateData);
+    const isChanged = currentDataStr !== originalDataRef.current;
+    setHasUnsavedChanges(isChanged);
+    
+    // Always save current state to context
+    setUpdateEditorState(stateKey, {
+      title: updateData.title,
+      subtitle: updateData.subtitle || '',
+      category: updateData.category,
+      version: updateData.version || '',
+      coverImageUrl: updateData.cover_image_url || '',
+      content: updateData.content,
+      isPublished: updateData.is_published,
+    });
+  }, [updateData, isDataLoaded, stateKey, setUpdateEditorState]);
+
+  // Browser close protection
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -196,7 +245,7 @@ const UpdateEditor = () => {
 
         if (error) throw error;
         toast.success(publish ? 'Güncelleme yayınlandı!' : 'Güncelleme oluşturuldu!');
-        markAsSaved();
+        clearUpdateEditorState(stateKey);
         navigate('/admin');
         return;
       }
@@ -209,14 +258,16 @@ const UpdateEditor = () => {
         }));
       }
 
-      markAsSaved();
+      clearUpdateEditorState(stateKey);
+      originalDataRef.current = JSON.stringify(updateData);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Save error:', error);
       toast.error('Kaydetme sırasında hata oluştu');
     } finally {
       setIsSaving(false);
     }
-  }, [updateData, isEditMode, id, user?.id, markAsSaved, navigate]);
+  }, [updateData, isEditMode, id, user?.id, navigate, stateKey, clearUpdateEditorState]);
 
   if (authLoading || isCheckingAuth) {
     return (
@@ -242,13 +293,6 @@ const UpdateEditor = () => {
     <div className="min-h-screen bg-background">
       {/* Navigation Guard */}
       <NavigationGuard when={hasUnsavedChanges} />
-
-      {/* Draft Prompt */}
-      <DraftPrompt
-        open={isDraftPromptPending}
-        onLoadDraft={loadDraft}
-        onIgnoreDraft={ignoreDraft}
-      />
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -498,56 +542,27 @@ const UpdateEditor = () => {
                 </div>
 
                 <div className="p-4 border border-border rounded-lg space-y-3">
-                  <p className="font-medium">Kontrol Listesi</p>
+                  <p className="font-medium">Yayın Kontrol Listesi</p>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          updateData.title ? 'bg-emerald-500' : 'bg-red-500'
-                        }`}
-                      />
-                      Başlık {updateData.title ? 'eklendi' : 'eklenmedi'}
+                      <span className={updateData.title ? 'text-green-500' : 'text-muted-foreground'}>
+                        {updateData.title ? '✓' : '○'}
+                      </span>
+                      Başlık girildi
                     </li>
                     <li className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          updateData.cover_image_url ? 'bg-emerald-500' : 'bg-amber-500'
-                        }`}
-                      />
-                      Kapak görseli{' '}
-                      {updateData.cover_image_url ? 'eklendi' : '(opsiyonel)'}
+                      <span className={updateData.content.length > 0 ? 'text-green-500' : 'text-muted-foreground'}>
+                        {updateData.content.length > 0 ? '✓' : '○'}
+                      </span>
+                      İçerik eklendi
                     </li>
                     <li className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          updateData.content.length > 0 ? 'bg-emerald-500' : 'bg-amber-500'
-                        }`}
-                      />
-                      İçerik blokları: {updateData.content.length} adet
+                      <span className={updateData.cover_image_url ? 'text-green-500' : 'text-muted-foreground'}>
+                        {updateData.cover_image_url ? '✓' : '○'}
+                      </span>
+                      Kapak görseli eklendi (opsiyonel)
                     </li>
                   </ul>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => handleSave(false)}
-                    disabled={isSaving}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Taslak Olarak Kaydet
-                  </Button>
-                  {!updateData.is_published && (
-                    <Button
-                      className="flex-1"
-                      onClick={() => handleSave(true)}
-                      disabled={isSaving}
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      Yayınla
-                    </Button>
-                  )}
                 </div>
               </CardContent>
             </Card>

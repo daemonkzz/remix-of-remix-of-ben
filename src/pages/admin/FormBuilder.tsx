@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminEditorState } from '@/contexts/AdminEditorStateContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Eye, Loader2 } from 'lucide-react';
@@ -12,9 +13,7 @@ import { FormBuilderPages } from '@/components/admin/FormBuilderPages';
 import { FormBuilderSettings } from '@/components/admin/FormBuilderSettings';
 import { FormPreviewModal } from '@/components/admin/FormPreviewModal';
 import { NavigationGuard } from '@/components/admin/NavigationGuard';
-import { DraftPrompt } from '@/components/admin/DraftPrompt';
 import { UnsavedIndicator } from '@/components/admin/UnsavedIndicator';
-import { useFormDraft } from '@/hooks/useFormDraft';
 import type { FormTemplate, FormQuestion, FormSettings, FormPage, FormType } from '@/types/formBuilder';
 
 interface FormBuilderData {
@@ -51,6 +50,8 @@ const FormBuilder = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user, isLoading: authLoading } = useAuth();
+  const { getFormBuilderState, setFormBuilderState, clearFormBuilderState } = useAdminEditorState();
+  
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -58,22 +59,12 @@ const FormBuilder = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [hasActiveWhitelistForm, setHasActiveWhitelistForm] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-
-  // Draft management
-  const draftKey = `formbuilder_${id || 'new'}`;
-  const {
-    data: formData,
-    setData: setFormData,
-    hasUnsavedChanges,
-    markAsSaved,
-    loadDraft,
-    ignoreDraft,
-    isDraftPromptPending,
-  } = useFormDraft<FormBuilderData>({
-    key: draftKey,
-    initialData: defaultFormData,
-    autoLoad: true,
-  });
+  
+  // Form data state
+  const [formData, setFormData] = useState<FormBuilderData>(defaultFormData);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const originalDataRef = useRef<string>('');
+  const stateKey = id || 'new';
 
   // Check admin role
   useEffect(() => {
@@ -135,14 +126,28 @@ const FormBuilder = () => {
     checkActiveWhitelistForm();
   }, [isAuthorized, id]);
 
-  // Load existing form template if editing
+  // Load data: First check context, then DB
   useEffect(() => {
-    if (id && isAuthorized) {
+    if (!isAuthorized) return;
+    
+    // Check context for existing state
+    const contextState = getFormBuilderState(stateKey);
+    if (contextState) {
+      setFormData(contextState as FormBuilderData);
+      setHasUnsavedChanges(true);
+      setIsDataLoaded(true);
+      return;
+    }
+    
+    // No context state, load from DB if editing
+    if (id) {
       loadFormTemplate();
-    } else if (!id && isAuthorized) {
+    } else {
+      setFormData(defaultFormData);
+      originalDataRef.current = JSON.stringify(defaultFormData);
       setIsDataLoaded(true);
     }
-  }, [id, isAuthorized]);
+  }, [id, isAuthorized, stateKey]);
 
   const loadFormTemplate = async () => {
     if (!id) return;
@@ -163,7 +168,7 @@ const FormBuilder = () => {
         const loadedPages = (loadedSettings.pages as FormPage[]) || [];
         const loadedFormType = (loadedSettings.formType as FormType) || 'other';
         
-        setFormData({
+        const loadedData: FormBuilderData = {
           title: data.title,
           description: data.description || '',
           coverImageUrl: data.cover_image_url || '',
@@ -180,7 +185,10 @@ const FormBuilder = () => {
             isPasswordProtected: (loadedSettings.isPasswordProtected as boolean) || false,
             formType: loadedFormType,
           },
-        });
+        };
+        
+        setFormData(loadedData);
+        originalDataRef.current = JSON.stringify(loadedData);
         setIsDataLoaded(true);
       }
     } catch (error) {
@@ -204,6 +212,31 @@ const FormBuilder = () => {
       },
     }));
   }, [formData.formType, isDataLoaded]);
+
+  // Save to context on every change
+  useEffect(() => {
+    if (!isDataLoaded) return;
+    
+    const currentDataStr = JSON.stringify(formData);
+    const isChanged = currentDataStr !== originalDataRef.current;
+    setHasUnsavedChanges(isChanged);
+    
+    // Always save current state to context
+    setFormBuilderState(stateKey, formData);
+  }, [formData, isDataLoaded, stateKey, setFormBuilderState]);
+
+  // Browser close protection
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -268,7 +301,10 @@ const FormBuilder = () => {
         toast.success('Form şablonu oluşturuldu');
       }
 
-      markAsSaved();
+      // Clear context state after successful save
+      clearFormBuilderState(stateKey);
+      originalDataRef.current = JSON.stringify(formData);
+      setHasUnsavedChanges(false);
       navigate('/admin');
     } catch (error) {
       console.error('Save error:', error);
@@ -276,7 +312,7 @@ const FormBuilder = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [formData, hasActiveWhitelistForm, id, user?.id, markAsSaved, navigate]);
+  }, [formData, hasActiveWhitelistForm, id, user?.id, navigate, stateKey, clearFormBuilderState]);
 
   // Update individual fields
   const updateField = <K extends keyof FormBuilderData>(
@@ -316,13 +352,6 @@ const FormBuilder = () => {
     <div className="min-h-screen bg-background">
       {/* Navigation Guard */}
       <NavigationGuard when={hasUnsavedChanges} />
-
-      {/* Draft Prompt */}
-      <DraftPrompt
-        open={isDraftPromptPending}
-        onLoadDraft={loadDraft}
-        onIgnoreDraft={ignoreDraft}
-      />
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b border-border">
