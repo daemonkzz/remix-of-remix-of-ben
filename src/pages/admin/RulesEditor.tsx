@@ -699,7 +699,7 @@ const RulesEditorContent = () => {
                                         rule={rule}
                                         isEditing={editingItem?.type === 'rule' && editingItem.id === rule.id}
                                         onEdit={() => setEditingItem({ type: 'rule', id: rule.id })}
-                                        onSave={() => setEditingItem(null)}
+                                        onCancelEdit={() => setEditingItem(null)}
                                         onUpdate={(updates) => updateRule(category.id, subCategory.id, rule.id, updates)}
                                         onDelete={() => setDeleteConfirm({
                                           type: 'rule',
@@ -707,6 +707,7 @@ const RulesEditorContent = () => {
                                           parentId: category.id,
                                           subParentId: subCategory.id,
                                         })}
+                                        formatDate={formatDate}
                                       />
                                     ))}
                                   </div>

@@ -1,37 +1,34 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-// Form Builder types
+// Form Builder types - matches FormBuilder.tsx local type
 interface FormBuilderData {
   title: string;
   description: string;
   coverImageUrl: string;
+  isActive: boolean;
   formType: string;
   pages: Array<{
     id: string;
     title: string;
-    description: string;
+    questionIds: string[];
   }>;
   questions: Array<{
     id: string;
-    pageId: string;
     type: string;
     label: string;
-    placeholder: string;
+    placeholder?: string;
     required: boolean;
-    options: string[];
-    minLength?: number;
-    maxLength?: number;
-    order: number;
+    options?: string[];
+    pageId?: string;
   }>;
   settings: {
+    discordWebhookUrl: string;
+    userAccessTypes: string[];
+    cooldownHours: number;
+    maxApplications: number;
+    accessCodes: string[];
+    isPasswordProtected: boolean;
     formType: string;
-    requiresAccessCode: boolean;
-    accessCode: string;
-    allowMultipleSubmissions: boolean;
-    showProgressBar: boolean;
-    submitButtonText: string;
-    successMessage: string;
-    redirectUrl: string;
   };
 }
 
