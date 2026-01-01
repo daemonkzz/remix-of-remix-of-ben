@@ -281,6 +281,14 @@ const ManageAccessContent: React.FC = () => {
 
       if (error) {
         if (import.meta.env.DEV) console.error('Add user error:', error);
+        // Duplicate key hatası (PostgreSQL error code: 23505)
+        if (error.code === '23505' || error.message?.includes('duplicate')) {
+          toast.info('Bu kullanıcı zaten yetki listesinde');
+          fetchAdminList(); // Listeyi yenile
+          setSearchResult(null);
+          setSearchQuery('');
+          return;
+        }
         toast.error('Kullanıcı eklenirken hata oluştu');
         return;
       }
