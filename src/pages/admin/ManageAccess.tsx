@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Search, 
-  UserPlus, 
-  Shield, 
-  ShieldCheck, 
-  ShieldX, 
-  QrCode, 
-  Trash2, 
+import {
+  Search,
+  UserPlus,
+  Shield,
+  ShieldCheck,
+  ShieldX,
+  QrCode,
+  Trash2,
   Unlock,
   Loader2,
   Copy,
@@ -79,7 +79,7 @@ const ManageAccessContent: React.FC = () => {
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [provisioningUserId, setProvisioningUserId] = useState<string | null>(null);
   const [unblockingUserId, setUnblockingUserId] = useState<string | null>(null);
-  
+
   // QR Modal State
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -188,13 +188,13 @@ const ManageAccessContent: React.FC = () => {
     try {
       const rawQuery = searchQuery.trim();
       const sanitizedQuery = sanitizeSearchInput(rawQuery);
-      
+
       if (!sanitizedQuery) {
         setSearchError('Geçersiz arama sorgusu');
         setIsSearching(false);
         return;
       }
-      
+
       // Use separate filter calls instead of string interpolation to prevent SQL injection
       // First try exact match on discord_id or steam_id
       let data = null;
@@ -207,7 +207,7 @@ const ManageAccessContent: React.FC = () => {
         .ilike('username', `%${sanitizedQuery}%`)
         .limit(1)
         .maybeSingle();
-      
+
       if (usernameResult.data) {
         data = usernameResult.data;
       } else if (!usernameResult.error) {
@@ -218,7 +218,7 @@ const ManageAccessContent: React.FC = () => {
           .eq('discord_id', sanitizedQuery)
           .limit(1)
           .maybeSingle();
-        
+
         if (discordResult.data) {
           data = discordResult.data;
         } else if (!discordResult.error) {
@@ -229,7 +229,7 @@ const ManageAccessContent: React.FC = () => {
             .eq('steam_id', sanitizedQuery)
             .limit(1)
             .maybeSingle();
-          
+
           data = steamResult.data;
           error = steamResult.error;
         } else {
@@ -389,8 +389,10 @@ const ManageAccessContent: React.FC = () => {
       // Show QR modal
       setQrCodeUrl(qrDataUrl);
       setTotpSecret(secret);
+      setQrModalUsername(username);
       setQrModalOpen(true);
-      
+
+
       toast.success('2FA kurulumu tamamlandı');
       fetchAdminList();
     } catch (error) {
@@ -487,7 +489,7 @@ const ManageAccessContent: React.FC = () => {
       await navigator.clipboard.writeText(totpSecret);
       setSecretCopied(true);
       setTimeout(() => setSecretCopied(false), 2000);
-      
+
       // Güvenlik uyarısı göster (sadece bir kez)
       if (!secretWarningShown) {
         toast.warning('Bu secret\'ı güvenli bir yerde saklayın. Modal kapandıktan sonra tekrar gösterilmeyecek!', {
@@ -705,17 +707,17 @@ const ManageAccessContent: React.FC = () => {
 
       {/* QR Code Modal */}
       <Dialog open={qrModalOpen} onOpenChange={handleQrModalClose}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="w-5 h-5" />
-              2FA QR Kodu
+              2FA Kurulumu
               {qrModalUsername && (
                 <Badge variant="outline" className="ml-2">{qrModalUsername}</Badge>
               )}
             </DialogTitle>
             <DialogDescription>
-              Bu QR kodu authenticator uygulamasıyla tarayın
+              Bu bilgileri kullanıcıyla paylaşın. Kullanıcı bu secret'ı authenticator uygulamasına ekleyecek.
             </DialogDescription>
           </DialogHeader>
 
@@ -727,29 +729,45 @@ const ManageAccessContent: React.FC = () => {
             )}
 
             {totpSecret && (
-              <div className="w-full">
-                <p className="text-sm text-muted-foreground mb-2 text-center">
-                  veya manuel olarak girin:
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono text-center break-all">
-                    {getMaskedSecret(totpSecret)}
-                  </code>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={copySecret}
-                    title="Tam secret'ı kopyala"
-                  >
-                    {secretCopied ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
+              <div className="w-full space-y-4">
+                {/* Secret Key - Full Display for Sharing */}
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                  <p className="text-sm font-medium text-foreground mb-2">
+                    🔑 TOTP Secret Key
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-background px-3 py-2 rounded text-sm font-mono text-center break-all border select-all">
+                      {totpSecret}
+                    </code>
+                    <Button
+                      variant="default"
+                      size="icon"
+                      onClick={copySecret}
+                      title="Secret'ı kopyala"
+                    >
+                      {secretCopied ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-xs text-amber-500 mt-2 text-center">
-                  ⚠️ Bu secret sadece bir kez gösterilir. Kopyalayıp güvenli bir yerde saklayın.
+
+                {/* Instructions for Admin */}
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-1">
+                    📋 Kullanıcıya Paylaşım Talimatları:
+                  </p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Yukarıdaki secret key'i kullanıcıyla güvenli bir şekilde paylaşın</li>
+                    <li>Kullanıcı bu kodu Google Authenticator veya benzeri uygulamaya eklesin</li>
+                    <li>Kullanıcı artık admin paneline giriş yapabilir</li>
+                  </ol>
+                </div>
+
+                <p className="text-xs text-destructive text-center font-medium">
+                  ⚠️ Bu secret'ı sadece ilgili kullanıcıyla paylaşın!
                 </p>
               </div>
             )}
@@ -757,13 +775,14 @@ const ManageAccessContent: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+
       {/* Remove User Confirmation */}
       <AlertDialog open={!!removingUserId} onOpenChange={() => setRemovingUserId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Kullanıcıyı Kaldır</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu kullanıcıyı yetki listesinden kaldırmak istediğinize emin misiniz? 
+              Bu kullanıcıyı yetki listesinden kaldırmak istediğinize emin misiniz?
               Admin paneline erişimi kaybolacaktır.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -785,7 +804,7 @@ const ManageAccessContent: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Blokajı Kaldır</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu kullanıcının blokajını kaldırmak istediğinize emin misiniz? 
+              Bu kullanıcının blokajını kaldırmak istediğinize emin misiniz?
               Başarısız deneme sayısı sıfırlanacaktır.
             </AlertDialogDescription>
           </AlertDialogHeader>
