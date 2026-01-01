@@ -10,6 +10,8 @@ interface UseFormDraftOptions<T> {
   debounceMs?: number;
   /** Whether to show toast on auto-save */
   showSaveToast?: boolean;
+  /** Auto-load draft without showing prompt (default: false) */
+  autoLoad?: boolean;
 }
 
 interface UseFormDraftReturn<T> {
@@ -38,6 +40,7 @@ export function useFormDraft<T>({
   initialData,
   debounceMs = 1000,
   showSaveToast = false,
+  autoLoad = false,
 }: UseFormDraftOptions<T>): UseFormDraftReturn<T> {
   const [data, setData] = useState<T>(initialData);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -58,14 +61,24 @@ export function useFormDraft<T>({
     
     if (savedDraft) {
       try {
-        JSON.parse(savedDraft); // Validate JSON
-        setHasDraft(true);
-        setIsDraftPromptPending(true);
+        const parsedData = JSON.parse(savedDraft) as T;
+        
+        if (autoLoad) {
+          // Auto-load: silently restore draft without modal
+          setData(parsedData);
+          setHasUnsavedChanges(true);
+          lastSavedDataRef.current = savedDraft;
+          toast.info('Kaldığınız yerden devam ediyorsunuz', { duration: 2000 });
+        } else {
+          // Manual load: show draft prompt modal
+          setHasDraft(true);
+          setIsDraftPromptPending(true);
+        }
       } catch {
         localStorage.removeItem(storageKey);
       }
     }
-  }, [key]);
+  }, [key, autoLoad]);
 
   // Auto-save to localStorage with debounce
   useEffect(() => {

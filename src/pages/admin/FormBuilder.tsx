@@ -72,6 +72,7 @@ const FormBuilder = () => {
   } = useFormDraft<FormBuilderData>({
     key: draftKey,
     initialData: defaultFormData,
+    autoLoad: true,
   });
 
   // Check admin role

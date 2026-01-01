@@ -49,8 +49,11 @@ const NotificationEditorContent = () => {
   
   const initialLoadRef = useRef(false);
 
-  // Load draft on mount
+  // Auto-load draft on mount (silent)
   useEffect(() => {
+    if (initialLoadRef.current) return;
+    initialLoadRef.current = true;
+    
     const savedDraft = localStorage.getItem(DRAFT_KEY);
     if (savedDraft) {
       try {
@@ -59,12 +62,11 @@ const NotificationEditorContent = () => {
         setContent(draft.content || '');
         setTargetType(draft.targetType || 'all');
         setSelectedUsers(draft.selectedUsers || []);
-        toast.info('Taslak yüklendi');
+        toast.info('Kaldığınız yerden devam ediyorsunuz', { duration: 2000 });
       } catch {
         localStorage.removeItem(DRAFT_KEY);
       }
     }
-    initialLoadRef.current = true;
   }, []);
 
   // Auto-save to localStorage

@@ -43,7 +43,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { RuleEditorCard, RuleFormatGuide } from '@/components/admin/rules';
 import { RuleContentRenderer } from '@/components/rules/RuleContentRenderer';
 import { NavigationGuard } from '@/components/admin/NavigationGuard';
-import { DraftPrompt } from '@/components/admin/DraftPrompt';
+
 import { UnsavedIndicator } from '@/components/admin/UnsavedIndicator';
 import type { MainCategory, SubCategory, Rule } from '@/types/rules';
 import { kazeRulesData } from '@/data/rulesData';
@@ -68,8 +68,6 @@ const RulesEditorContent = () => {
   
   // Draft state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isDraftPromptPending, setIsDraftPromptPending] = useState(false);
-  const [hasDraft, setHasDraft] = useState(false);
   const initialLoadRef = useRef(false);
   const lastSavedDataRef = useRef<string>('');
   
@@ -84,25 +82,30 @@ const RulesEditorContent = () => {
   const [previewExpandedCats, setPreviewExpandedCats] = useState<string[]>([]);
   const [previewExpandedSubs, setPreviewExpandedSubs] = useState<string[]>([]);
 
-  // Check for draft on mount and load rules
+  // Auto-load draft on mount and load rules
   useEffect(() => {
     const savedDraft = localStorage.getItem(DRAFT_KEY);
     if (savedDraft) {
       try {
-        JSON.parse(savedDraft);
-        setHasDraft(true);
-        setIsDraftPromptPending(true);
+        const parsedData = JSON.parse(savedDraft) as MainCategory[];
+        setCategories(parsedData);
+        setHasUnsavedChanges(true);
+        lastSavedDataRef.current = savedDraft;
+        toast.info('Kaldığınız yerden devam ediyorsunuz', { duration: 2000 });
+        // Load original from DB for comparison
+        loadRules(true);
+        return;
       } catch {
         localStorage.removeItem(DRAFT_KEY);
       }
     }
-    // Always load rules regardless of draft status
+    // No draft, load normally
     loadRules();
   }, []);
 
   // Auto-save to localStorage
   useEffect(() => {
-    if (!initialLoadRef.current || isDraftPromptPending) return;
+    if (!initialLoadRef.current) return;
     
     const currentDataStr = JSON.stringify(categories);
     const originalDataStr = JSON.stringify(originalCategories);
@@ -119,7 +122,7 @@ const RulesEditorContent = () => {
     } else if (currentDataStr === originalDataStr) {
       setHasUnsavedChanges(false);
     }
-  }, [categories, originalCategories, isDraftPromptPending]);
+  }, [categories, originalCategories]);
 
   // Browser/tab close protection
   useEffect(() => {
@@ -154,35 +157,8 @@ const RulesEditorContent = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSaving, categories, rulesId, user?.id]);
 
-  const loadDraft = useCallback(() => {
-    const savedDraft = localStorage.getItem(DRAFT_KEY);
-    if (savedDraft) {
-      try {
-        const parsedData = JSON.parse(savedDraft) as MainCategory[];
-        setCategories(parsedData);
-        setHasDraft(false);
-        setIsDraftPromptPending(false);
-        setHasUnsavedChanges(true);
-        toast.success('Taslak yüklendi');
-        // Now load the original from DB for comparison
-        loadRules(true);
-      } catch {
-        localStorage.removeItem(DRAFT_KEY);
-        setIsDraftPromptPending(false);
-      }
-    }
-  }, []);
-
-  const ignoreDraft = useCallback(() => {
-    localStorage.removeItem(DRAFT_KEY);
-    setHasDraft(false);
-    setIsDraftPromptPending(false);
-    toast.info('Taslak silindi');
-  }, []);
-
   const clearDraft = useCallback(() => {
     localStorage.removeItem(DRAFT_KEY);
-    setHasDraft(false);
     lastSavedDataRef.current = '';
   }, []);
 
@@ -482,12 +458,6 @@ const RulesEditorContent = () => {
       {/* Navigation Guard */}
       <NavigationGuard when={hasUnsavedChanges} />
 
-      {/* Draft Prompt */}
-      <DraftPrompt
-        open={isDraftPromptPending}
-        onLoadDraft={loadDraft}
-        onIgnoreDraft={ignoreDraft}
-      />
 
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">

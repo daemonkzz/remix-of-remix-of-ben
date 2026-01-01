@@ -64,6 +64,7 @@ const UpdateEditor = () => {
   } = useFormDraft<UpdateData>({
     key: draftKey,
     initialData: { ...defaultUpdateData },
+    autoLoad: true,
   });
 
   // Check admin role
