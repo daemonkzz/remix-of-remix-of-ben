@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +11,41 @@ import { FormBuilderQuestions } from '@/components/admin/FormBuilderQuestions';
 import { FormBuilderPages } from '@/components/admin/FormBuilderPages';
 import { FormBuilderSettings } from '@/components/admin/FormBuilderSettings';
 import { FormPreviewModal } from '@/components/admin/FormPreviewModal';
+import { NavigationGuard } from '@/components/admin/NavigationGuard';
+import { DraftPrompt } from '@/components/admin/DraftPrompt';
+import { UnsavedIndicator } from '@/components/admin/UnsavedIndicator';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import type { FormTemplate, FormQuestion, FormSettings, FormPage, FormType } from '@/types/formBuilder';
+
+interface FormBuilderData {
+  title: string;
+  description: string;
+  coverImageUrl: string;
+  isActive: boolean;
+  questions: FormQuestion[];
+  pages: FormPage[];
+  formType: FormType;
+  settings: FormSettings;
+}
+
+const defaultFormData: FormBuilderData = {
+  title: '',
+  description: '',
+  coverImageUrl: '',
+  isActive: true,
+  questions: [],
+  pages: [],
+  formType: 'other',
+  settings: {
+    discordWebhookUrl: '',
+    userAccessTypes: ['verified'],
+    cooldownHours: 0,
+    maxApplications: 0,
+    accessCodes: [],
+    isPasswordProtected: false,
+    formType: 'other',
+  },
+};
 
 const FormBuilder = () => {
   const navigate = useNavigate();
@@ -23,23 +57,21 @@ const FormBuilder = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [hasActiveWhitelistForm, setHasActiveWhitelistForm] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // Form state
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [coverImageUrl, setCoverImageUrl] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [questions, setQuestions] = useState<FormQuestion[]>([]);
-  const [pages, setPages] = useState<FormPage[]>([]);
-  const [formType, setFormType] = useState<FormType>('other');
-  const [settings, setSettings] = useState<FormSettings>({
-    discordWebhookUrl: '',
-    userAccessTypes: ['verified'],
-    cooldownHours: 0,
-    maxApplications: 0,
-    accessCodes: [],
-    isPasswordProtected: false,
-    formType: 'other',
+  // Draft management
+  const draftKey = `formbuilder_${id || 'new'}`;
+  const {
+    data: formData,
+    setData: setFormData,
+    hasUnsavedChanges,
+    markAsSaved,
+    loadDraft,
+    ignoreDraft,
+    isDraftPromptPending,
+  } = useFormDraft<FormBuilderData>({
+    key: draftKey,
+    initialData: defaultFormData,
   });
 
   // Check admin role
@@ -54,7 +86,6 @@ const FormBuilder = () => {
       }
 
       try {
-        // Check if user can manage forms
         const { data: canManageForms, error: roleError } = await supabase
           .rpc('can_manage', { _user_id: user.id, _feature: 'forms' });
 
@@ -105,10 +136,12 @@ const FormBuilder = () => {
 
   // Load existing form template if editing
   useEffect(() => {
-    if (id && isAuthorized) {
+    if (id && isAuthorized && !isDraftPromptPending) {
       loadFormTemplate();
+    } else if (!id && isAuthorized && !isDraftPromptPending) {
+      setIsDataLoaded(true);
     }
-  }, [id, isAuthorized]);
+  }, [id, isAuthorized, isDraftPromptPending]);
 
   const loadFormTemplate = async () => {
     if (!id) return;
@@ -124,31 +157,30 @@ const FormBuilder = () => {
       if (error) throw error;
 
       if (data) {
-        setTitle(data.title);
-        setDescription(data.description || '');
-        setCoverImageUrl(data.cover_image_url || '');
-        setIsActive(data.is_active ?? true);
-        
         const loadedQuestions = (data.questions as FormQuestion[]) || [];
-        setQuestions(loadedQuestions);
-        
-        // Load pages from settings or create empty array
         const loadedSettings = data.settings as Record<string, unknown> || {};
         const loadedPages = (loadedSettings.pages as FormPage[]) || [];
-        setPages(loadedPages);
-        
         const loadedFormType = (loadedSettings.formType as FormType) || 'other';
-        setFormType(loadedFormType);
         
-        setSettings({
-          discordWebhookUrl: (loadedSettings.discordWebhookUrl as string) || '',
-          userAccessTypes: (loadedSettings.userAccessTypes as ('unverified' | 'verified')[]) || ['verified'],
-          cooldownHours: (loadedSettings.cooldownHours as number) || 0,
-          maxApplications: (loadedSettings.maxApplications as number) || 0,
-          accessCodes: (loadedSettings.accessCodes as string[]) || [],
-          isPasswordProtected: (loadedSettings.isPasswordProtected as boolean) || false,
+        setFormData({
+          title: data.title,
+          description: data.description || '',
+          coverImageUrl: data.cover_image_url || '',
+          isActive: data.is_active ?? true,
+          questions: loadedQuestions,
+          pages: loadedPages,
           formType: loadedFormType,
+          settings: {
+            discordWebhookUrl: (loadedSettings.discordWebhookUrl as string) || '',
+            userAccessTypes: (loadedSettings.userAccessTypes as ('unverified' | 'verified')[]) || ['verified'],
+            cooldownHours: (loadedSettings.cooldownHours as number) || 0,
+            maxApplications: (loadedSettings.maxApplications as number) || 0,
+            accessCodes: (loadedSettings.accessCodes as string[]) || [],
+            isPasswordProtected: (loadedSettings.isPasswordProtected as boolean) || false,
+            formType: loadedFormType,
+          },
         });
+        setIsDataLoaded(true);
       }
     } catch (error) {
       console.error('Load form template error:', error);
@@ -160,69 +192,82 @@ const FormBuilder = () => {
 
   // Sync formType with settings
   useEffect(() => {
-    setSettings((prev) => ({
+    if (!isDataLoaded) return;
+    
+    setFormData((prev) => ({
       ...prev,
-      formType,
-      // If whitelist, only unverified users can access
-      userAccessTypes: formType === 'whitelist' ? ['unverified'] : prev.userAccessTypes,
+      settings: {
+        ...prev.settings,
+        formType: prev.formType,
+        userAccessTypes: prev.formType === 'whitelist' ? ['unverified'] : prev.settings.userAccessTypes,
+      },
     }));
-  }, [formType]);
+  }, [formData.formType, isDataLoaded]);
 
-  const handleSave = async () => {
-    if (!title.trim()) {
+  // Keyboard shortcut handler
+  useEffect(() => {
+    const handleSaveRequest = () => {
+      if (!isSaving) {
+        handleSave();
+      }
+    };
+
+    window.addEventListener('formDraftSaveRequest', handleSaveRequest);
+    return () => window.removeEventListener('formDraftSaveRequest', handleSaveRequest);
+  }, [isSaving, formData]);
+
+  const handleSave = useCallback(async () => {
+    if (!formData.title.trim()) {
       toast.error('Form başlığı zorunludur');
       return;
     }
 
-    if (questions.length === 0) {
+    if (formData.questions.length === 0) {
       toast.error('En az bir soru eklemelisiniz');
       return;
     }
 
-    // Check if trying to activate a whitelist form when another is already active
-    if (formType === 'whitelist' && isActive && hasActiveWhitelistForm) {
+    if (formData.formType === 'whitelist' && formData.isActive && hasActiveWhitelistForm) {
       toast.error('Aynı anda yalnızca bir whitelist formu aktif olabilir');
       return;
     }
 
     setIsSaving(true);
     try {
-      // Include pages in settings for storage
       const settingsWithPages = {
-        ...settings,
-        pages: pages,
-        formType: formType,
+        ...formData.settings,
+        pages: formData.pages,
+        formType: formData.formType,
       };
 
-      const formData = {
-        title: title.trim(),
-        description: description.trim(),
-        cover_image_url: coverImageUrl.trim() || null,
-        is_active: isActive,
-        questions: questions,
+      const dataToSave = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        cover_image_url: formData.coverImageUrl.trim() || null,
+        is_active: formData.isActive,
+        questions: formData.questions,
         settings: settingsWithPages,
         created_by: user?.id,
       };
 
       if (id) {
-        // Update existing
         const { error } = await supabase
           .from('form_templates')
-          .update(formData)
+          .update(dataToSave)
           .eq('id', id);
 
         if (error) throw error;
         toast.success('Form şablonu güncellendi');
       } else {
-        // Create new
         const { error } = await supabase
           .from('form_templates')
-          .insert(formData);
+          .insert(dataToSave);
 
         if (error) throw error;
         toast.success('Form şablonu oluşturuldu');
       }
 
+      markAsSaved();
       navigate('/admin');
     } catch (error) {
       console.error('Save error:', error);
@@ -230,6 +275,14 @@ const FormBuilder = () => {
     } finally {
       setIsSaving(false);
     }
+  }, [formData, hasActiveWhitelistForm, id, user?.id, markAsSaved, navigate]);
+
+  // Update individual fields
+  const updateField = <K extends keyof FormBuilderData>(
+    field: K,
+    value: FormBuilderData[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   if (authLoading || isCheckingAuth || isLoading) {
@@ -249,17 +302,27 @@ const FormBuilder = () => {
 
   const formTemplate: FormTemplate = {
     id: id || '',
-    title,
-    description,
-    coverImageUrl,
-    isActive,
-    questions,
-    pages,
-    settings,
+    title: formData.title,
+    description: formData.description,
+    coverImageUrl: formData.coverImageUrl,
+    isActive: formData.isActive,
+    questions: formData.questions,
+    pages: formData.pages,
+    settings: formData.settings,
   };
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Navigation Guard */}
+      <NavigationGuard when={hasUnsavedChanges} />
+
+      {/* Draft Prompt */}
+      <DraftPrompt
+        open={isDraftPromptPending}
+        onLoadDraft={loadDraft}
+        onIgnoreDraft={ignoreDraft}
+      />
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4">
@@ -273,11 +336,14 @@ const FormBuilder = () => {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-foreground">
-                  {id ? 'Form Düzenle' : 'Yeni Form Oluştur'}
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-bold text-foreground">
+                    {id ? 'Form Düzenle' : 'Yeni Form Oluştur'}
+                  </h1>
+                  <UnsavedIndicator hasUnsavedChanges={hasUnsavedChanges} />
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  {formType === 'whitelist' ? 'Whitelist Formu' : 'Gelişmiş Form Yöneticisi'}
+                  {formData.formType === 'whitelist' ? 'Whitelist Formu' : 'Gelişmiş Form Yöneticisi'}
                 </p>
               </div>
             </div>
@@ -320,16 +386,16 @@ const FormBuilder = () => {
 
           <TabsContent value="general">
             <FormBuilderGeneral
-              title={title}
-              setTitle={setTitle}
-              description={description}
-              setDescription={setDescription}
-              coverImageUrl={coverImageUrl}
-              setCoverImageUrl={setCoverImageUrl}
-              isActive={isActive}
-              setIsActive={setIsActive}
-              formType={formType}
-              setFormType={setFormType}
+              title={formData.title}
+              setTitle={(v) => updateField('title', v)}
+              description={formData.description}
+              setDescription={(v) => updateField('description', v)}
+              coverImageUrl={formData.coverImageUrl}
+              setCoverImageUrl={(v) => updateField('coverImageUrl', v)}
+              isActive={formData.isActive}
+              setIsActive={(v) => updateField('isActive', v)}
+              formType={formData.formType}
+              setFormType={(v) => updateField('formType', v)}
               hasActiveWhitelistForm={hasActiveWhitelistForm}
               currentFormId={id}
             />
@@ -337,25 +403,25 @@ const FormBuilder = () => {
 
           <TabsContent value="pages">
             <FormBuilderPages
-              pages={pages}
-              setPages={setPages}
-              questions={questions}
-              setQuestions={setQuestions}
+              pages={formData.pages}
+              setPages={(v) => updateField('pages', v)}
+              questions={formData.questions}
+              setQuestions={(v) => updateField('questions', v)}
             />
           </TabsContent>
 
           <TabsContent value="questions">
             <FormBuilderQuestions
-              questions={questions}
-              setQuestions={setQuestions}
-              pages={pages}
+              questions={formData.questions}
+              setQuestions={(v) => updateField('questions', v)}
+              pages={formData.pages}
             />
           </TabsContent>
 
           <TabsContent value="settings">
             <FormBuilderSettings
-              settings={settings}
-              setSettings={setSettings}
+              settings={formData.settings}
+              setSettings={(v) => updateField('settings', v)}
             />
           </TabsContent>
         </Tabs>

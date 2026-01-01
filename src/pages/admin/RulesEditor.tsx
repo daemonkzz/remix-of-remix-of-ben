@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -42,12 +42,17 @@ import {
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { RuleEditorCard, RuleFormatGuide } from '@/components/admin/rules';
 import { RuleContentRenderer } from '@/components/rules/RuleContentRenderer';
+import { NavigationGuard } from '@/components/admin/NavigationGuard';
+import { DraftPrompt } from '@/components/admin/DraftPrompt';
+import { UnsavedIndicator } from '@/components/admin/UnsavedIndicator';
 import type { MainCategory, SubCategory, Rule } from '@/types/rules';
 import { kazeRulesData } from '@/data/rulesData';
 import { useDiscordNotification } from '@/hooks/useDiscordNotification';
 
 // Default rules data to import
 const defaultRulesData: MainCategory[] = kazeRulesData;
+
+const DRAFT_KEY = 'ruleseditor_draft';
 
 const RulesEditorContent = () => {
   const { user } = useAuth();
@@ -61,6 +66,13 @@ const RulesEditorContent = () => {
   const [originalCategories, setOriginalCategories] = useState<MainCategory[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   
+  // Draft state
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isDraftPromptPending, setIsDraftPromptPending] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const initialLoadRef = useRef(false);
+  const lastSavedDataRef = useRef<string>('');
+  
   // UI State
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [expandedSubCategories, setExpandedSubCategories] = useState<Set<string>>(new Set());
@@ -72,13 +84,117 @@ const RulesEditorContent = () => {
   const [previewExpandedCats, setPreviewExpandedCats] = useState<string[]>([]);
   const [previewExpandedSubs, setPreviewExpandedSubs] = useState<string[]>([]);
 
-  // Load rules data
+  // Check for draft on mount
   useEffect(() => {
-    loadRules();
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        JSON.parse(savedDraft);
+        setHasDraft(true);
+        setIsDraftPromptPending(true);
+      } catch {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    }
   }, []);
 
-  const loadRules = async () => {
-    setIsLoading(true);
+  // Load rules data
+  useEffect(() => {
+    if (!isDraftPromptPending) {
+      loadRules();
+    }
+  }, [isDraftPromptPending]);
+
+  // Auto-save to localStorage
+  useEffect(() => {
+    if (!initialLoadRef.current || isDraftPromptPending) return;
+    
+    const currentDataStr = JSON.stringify(categories);
+    const originalDataStr = JSON.stringify(originalCategories);
+    
+    if (currentDataStr !== originalDataStr && currentDataStr !== lastSavedDataRef.current) {
+      setHasUnsavedChanges(true);
+      
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem(DRAFT_KEY, currentDataStr);
+        lastSavedDataRef.current = currentDataStr;
+      }, 1000);
+      
+      return () => clearTimeout(timeoutId);
+    } else if (currentDataStr === originalDataStr) {
+      setHasUnsavedChanges(false);
+    }
+  }, [categories, originalCategories, isDraftPromptPending]);
+
+  // Browser/tab close protection
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Keyboard shortcut handler
+  useEffect(() => {
+    const handleSaveRequest = () => {
+      if (!isSaving) {
+        handleSave();
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveRequest();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSaving, categories, rulesId, user?.id]);
+
+  const loadDraft = useCallback(() => {
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const parsedData = JSON.parse(savedDraft) as MainCategory[];
+        setCategories(parsedData);
+        setHasDraft(false);
+        setIsDraftPromptPending(false);
+        setHasUnsavedChanges(true);
+        toast.success('Taslak yüklendi');
+        // Now load the original from DB for comparison
+        loadRules(true);
+      } catch {
+        localStorage.removeItem(DRAFT_KEY);
+        setIsDraftPromptPending(false);
+      }
+    }
+  }, []);
+
+  const ignoreDraft = useCallback(() => {
+    localStorage.removeItem(DRAFT_KEY);
+    setHasDraft(false);
+    setIsDraftPromptPending(false);
+    toast.info('Taslak silindi');
+  }, []);
+
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(DRAFT_KEY);
+    setHasDraft(false);
+    lastSavedDataRef.current = '';
+  }, []);
+
+  const loadRules = async (skipDraftPrompt = false) => {
+    if (!skipDraftPrompt) {
+      setIsLoading(true);
+    }
     try {
       const { data, error } = await supabase
         .from('rules')
@@ -95,19 +211,26 @@ const RulesEditorContent = () => {
       if (data) {
         setRulesId(data.id);
         const loadedCategories = (data.data as MainCategory[]) || [];
-        setCategories(loadedCategories);
-        setOriginalCategories(JSON.parse(JSON.stringify(loadedCategories))); // Deep copy for comparison
+        if (!skipDraftPrompt) {
+          setCategories(loadedCategories);
+        }
+        setOriginalCategories(JSON.parse(JSON.stringify(loadedCategories)));
         setLastUpdated(data.updated_at);
+        initialLoadRef.current = true;
       }
     } catch (error) {
       console.error('Error:', error);
       toast.error('Kurallar yüklenirken hata oluştu');
     } finally {
-      setIsLoading(false);
+      if (!skipDraftPrompt) {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
+    if (!rulesId) return;
+    
     setIsSaving(true);
     try {
       const { error } = await supabase
@@ -116,7 +239,7 @@ const RulesEditorContent = () => {
           data: categories,
           updated_by: user?.id,
         })
-        .eq('id', rulesId!);
+        .eq('id', rulesId);
 
       if (error) {
         console.error('Save error:', error);
@@ -126,15 +249,16 @@ const RulesEditorContent = () => {
 
       toast.success('Kurallar başarıyla kaydedildi');
       setLastUpdated(new Date().toISOString());
-      // Update original categories after successful save
       setOriginalCategories(JSON.parse(JSON.stringify(categories)));
+      setHasUnsavedChanges(false);
+      clearDraft();
     } catch (error) {
       console.error('Save error:', error);
       toast.error('Kurallar kaydedilirken hata oluştu');
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [categories, rulesId, user?.id, clearDraft]);
 
   // Find updated rules by comparing with original categories
   const updatedRules = useMemo(() => {
@@ -149,7 +273,6 @@ const RulesEditorContent = () => {
         subCategory.rules.forEach(rule => {
           const originalRule = originalSubCategory?.rules.find(r => r.id === rule.id);
           
-          // Check if rule is new or modified
           if (!originalRule || 
               originalRule.title !== rule.title || 
               originalRule.description !== rule.description) {
@@ -176,7 +299,7 @@ const RulesEditorContent = () => {
 
   const handleImportDefaults = () => {
     setCategories(defaultRulesData);
-    setOriginalCategories(JSON.parse(JSON.stringify(defaultRulesData))); // Deep copy
+    setOriginalCategories(JSON.parse(JSON.stringify(defaultRulesData)));
     setImportConfirm(false);
     toast.success('Varsayılan kurallar içe aktarıldı. Kaydetmeyi unutmayın!');
   };
@@ -275,7 +398,6 @@ const RulesEditorContent = () => {
     const subCategory = category.subCategories.find(s => s.id === subCategoryId);
     if (!subCategory) return;
 
-    // Add lastUpdate when editing
     const updatesWithDate = {
       ...updates,
       lastUpdate: new Date().toISOString(),
@@ -362,10 +484,23 @@ const RulesEditorContent = () => {
 
   return (
     <div className="p-8">
+      {/* Navigation Guard */}
+      <NavigationGuard when={hasUnsavedChanges} />
+
+      {/* Draft Prompt */}
+      <DraftPrompt
+        open={isDraftPromptPending}
+        onLoadDraft={loadDraft}
+        onIgnoreDraft={ignoreDraft}
+      />
+
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Kurallar Düzenleyici</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-foreground">Kurallar Düzenleyici</h2>
+            <UnsavedIndicator hasUnsavedChanges={hasUnsavedChanges} />
+          </div>
           <p className="text-muted-foreground">
             {totalCategories} kategori, {totalSubCategories} alt kategori, {totalRules} kural
           </p>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,12 +22,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { NavigationGuard } from '@/components/admin/NavigationGuard';
+import { UnsavedIndicator } from '@/components/admin/UnsavedIndicator';
 
 interface UserProfile {
   id: string;
   username: string | null;
   avatar_url: string | null;
 }
+
+const DRAFT_KEY = 'notificationeditor_draft';
 
 const NotificationEditorContent = () => {
   const navigate = useNavigate();
@@ -41,15 +45,64 @@ const NotificationEditorContent = () => {
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  const initialLoadRef = useRef(false);
 
-  // Sanitize search input to prevent SQL injection
+  // Load draft on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        setTitle(draft.title || '');
+        setContent(draft.content || '');
+        setTargetType(draft.targetType || 'all');
+        setSelectedUsers(draft.selectedUsers || []);
+        toast.info('Taslak yüklendi');
+      } catch {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    }
+    initialLoadRef.current = true;
+  }, []);
+
+  // Auto-save to localStorage
+  useEffect(() => {
+    if (!initialLoadRef.current) return;
+    
+    const hasContent = !!(title.trim() || content.trim() || selectedUsers.length > 0);
+    setHasUnsavedChanges(hasContent);
+    
+    if (hasContent) {
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          title,
+          content,
+          targetType,
+          selectedUsers,
+        }));
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [title, content, targetType, selectedUsers]);
+
+  // Browser close protection
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const sanitizeSearchInput = (input: string): string => {
-    // Remove special characters that could be used for SQL injection
-    // Allow only alphanumeric, spaces, underscores, and hyphens
     return input.replace(/[^a-zA-Z0-9\s_\-]/g, '').substring(0, 100);
   };
 
-  // Search users
   useEffect(() => {
     const searchUsers = async () => {
       if (!searchQuery.trim() || targetType !== 'selected') {
@@ -73,7 +126,6 @@ const NotificationEditorContent = () => {
 
         if (error) throw error;
 
-        // Filter out already selected users
         const filtered = (data || []).filter(
           u => !selectedUsers.some(s => s.id === u.id)
         );
@@ -99,7 +151,7 @@ const NotificationEditorContent = () => {
     setSelectedUsers(prev => prev.filter(u => u.id !== userId));
   };
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!title.trim()) {
       toast.error('Lütfen bir başlık girin');
       return;
@@ -115,7 +167,6 @@ const NotificationEditorContent = () => {
 
     setIsSending(true);
     try {
-      // Create notification
       const { data: notification, error: notifError } = await supabase
         .from('notifications')
         .insert({
@@ -129,7 +180,6 @@ const NotificationEditorContent = () => {
 
       if (notifError) throw notifError;
 
-      // If targeted, add recipients
       if (targetType === 'selected' && notification) {
         const recipients = selectedUsers.map(u => ({
           notification_id: notification.id,
@@ -144,6 +194,9 @@ const NotificationEditorContent = () => {
         if (recipientError) throw recipientError;
       }
 
+      localStorage.removeItem(DRAFT_KEY);
+      setHasUnsavedChanges(false);
+      
       toast.success(
         targetType === 'all' 
           ? 'Bildirim tüm kullanıcılara gönderildi' 
@@ -156,24 +209,26 @@ const NotificationEditorContent = () => {
     } finally {
       setIsSending(false);
     }
-  };
+  }, [title, content, targetType, selectedUsers, user?.id, navigate]);
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
-      {/* Header */}
+      <NavigationGuard when={hasUnsavedChanges} />
+
       <div className="mb-8 flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
           <Bell className="w-6 h-6 text-primary" />
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Yeni Bildirim</h2>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-foreground">Yeni Bildirim</h2>
+            <UnsavedIndicator hasUnsavedChanges={hasUnsavedChanges} />
+          </div>
           <p className="text-muted-foreground">Kullanıcılara bildirim gönder</p>
         </div>
       </div>
 
-      {/* Form */}
       <div className="bg-card rounded-xl border border-border p-6 space-y-6">
-        {/* Title */}
         <div className="space-y-2">
           <Label htmlFor="title">Başlık</Label>
           <Input
@@ -184,7 +239,6 @@ const NotificationEditorContent = () => {
           />
         </div>
 
-        {/* Content */}
         <div className="space-y-2">
           <Label htmlFor="content">İçerik</Label>
           <Textarea
@@ -196,7 +250,6 @@ const NotificationEditorContent = () => {
           />
         </div>
 
-        {/* Target Selection */}
         <div className="space-y-4">
           <Label>Hedef Kitle</Label>
           <RadioGroup
@@ -228,20 +281,14 @@ const NotificationEditorContent = () => {
           </RadioGroup>
         </div>
 
-        {/* User Selection */}
         {targetType === 'selected' && (
           <div className="space-y-4">
             <Label>Kullanıcı Seç</Label>
             
-            {/* Selected Users */}
             {selectedUsers.length > 0 && (
               <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg">
                 {selectedUsers.map((userProfile) => (
-                  <Badge
-                    key={userProfile.id}
-                    variant="secondary"
-                    className="pl-1 pr-2 py-1 gap-2"
-                  >
+                  <Badge key={userProfile.id} variant="secondary" className="pl-1 pr-2 py-1 gap-2">
                     <Avatar className="w-5 h-5">
                       <AvatarImage src={userProfile.avatar_url || undefined} />
                       <AvatarFallback className="text-[10px]">
@@ -249,10 +296,7 @@ const NotificationEditorContent = () => {
                       </AvatarFallback>
                     </Avatar>
                     <span>{userProfile.username || 'Bilinmeyen'}</span>
-                    <button
-                      onClick={() => removeUser(userProfile.id)}
-                      className="ml-1 hover:text-destructive transition-colors"
-                    >
+                    <button onClick={() => removeUser(userProfile.id)} className="ml-1 hover:text-destructive transition-colors">
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>
@@ -260,7 +304,6 @@ const NotificationEditorContent = () => {
               </div>
             )}
 
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -274,7 +317,6 @@ const NotificationEditorContent = () => {
               )}
             </div>
 
-            {/* Search Results */}
             {searchResults.length > 0 && (
               <ScrollArea className="h-48 rounded-lg border border-border">
                 <div className="p-2 space-y-1">
@@ -286,13 +328,9 @@ const NotificationEditorContent = () => {
                     >
                       <Avatar className="w-8 h-8">
                         <AvatarImage src={result.avatar_url || undefined} />
-                        <AvatarFallback>
-                          {(result.username || 'U')[0].toUpperCase()}
-                        </AvatarFallback>
+                        <AvatarFallback>{(result.username || 'U')[0].toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm font-medium">
-                        {result.username || 'Bilinmeyen'}
-                      </span>
+                      <span className="text-sm font-medium">{result.username || 'Bilinmeyen'}</span>
                       <Check className="w-4 h-4 ml-auto text-primary opacity-0 group-hover:opacity-100" />
                     </button>
                   ))}
@@ -301,25 +339,13 @@ const NotificationEditorContent = () => {
             )}
 
             {searchQuery && searchResults.length === 0 && !isSearching && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Kullanıcı bulunamadı
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-4">Kullanıcı bulunamadı</p>
             )}
           </div>
         )}
 
-        {/* Send Button */}
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={handleSend}
-          disabled={isSending}
-        >
-          {isSending ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Send className="w-5 h-5" />
-          )}
+        <Button className="w-full gap-2" size="lg" onClick={handleSend} disabled={isSending}>
+          {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           {isSending ? 'Gönderiliyor...' : 'Bildirim Gönder'}
         </Button>
       </div>

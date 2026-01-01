@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -25,11 +24,14 @@ import {
   FileText,
   Send,
   Loader2,
-  Image,
   MessageSquare,
 } from 'lucide-react';
 import { RichTextEditor } from '@/components/admin/updates/RichTextEditor';
 import { UpdatePreview } from '@/components/admin/updates/UpdatePreview';
+import { NavigationGuard } from '@/components/admin/NavigationGuard';
+import { DraftPrompt } from '@/components/admin/DraftPrompt';
+import { UnsavedIndicator } from '@/components/admin/UnsavedIndicator';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import type { UpdateData, ContentBlock, UpdateCategory } from '@/types/update';
 import { defaultUpdateData } from '@/types/update';
 import { useDiscordNotification } from '@/hooks/useDiscordNotification';
@@ -45,9 +47,24 @@ const UpdateEditor = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const [updateData, setUpdateData] = useState<UpdateData>({ ...defaultUpdateData });
   const { sendUpdateNotification, isSending: isDiscordSending } = useDiscordNotification();
+
+  // Draft management
+  const draftKey = `updateeditor_${id || 'new'}`;
+  const {
+    data: updateData,
+    setData: setUpdateData,
+    hasUnsavedChanges,
+    markAsSaved,
+    loadDraft,
+    ignoreDraft,
+    isDraftPromptPending,
+  } = useFormDraft<UpdateData>({
+    key: draftKey,
+    initialData: { ...defaultUpdateData },
+  });
 
   // Check admin role
   useEffect(() => {
@@ -61,7 +78,6 @@ const UpdateEditor = () => {
       }
 
       try {
-        // Check if user can manage updates
         const { data: canManageUpdates, error } = await supabase.rpc('can_manage', {
           _user_id: user.id,
           _feature: 'updates',
@@ -87,10 +103,12 @@ const UpdateEditor = () => {
 
   // Load existing update if editing
   useEffect(() => {
-    if (isAuthorized && isEditMode && id) {
+    if (isAuthorized && isEditMode && id && !isDraftPromptPending) {
       loadUpdate(id);
+    } else if (isAuthorized && !isEditMode && !isDraftPromptPending) {
+      setIsDataLoaded(true);
     }
-  }, [isAuthorized, isEditMode, id]);
+  }, [isAuthorized, isEditMode, id, isDraftPromptPending]);
 
   const loadUpdate = async (updateId: string) => {
     setIsLoading(true);
@@ -122,6 +140,7 @@ const UpdateEditor = () => {
         created_at: data.created_at,
         updated_at: data.updated_at,
       });
+      setIsDataLoaded(true);
     } catch (error) {
       console.error('Load error:', error);
       toast.error('Güncelleme yüklenirken hata oluştu');
@@ -130,7 +149,19 @@ const UpdateEditor = () => {
     }
   };
 
-  const handleSave = async (publish: boolean = false) => {
+  // Keyboard shortcut handler
+  useEffect(() => {
+    const handleSaveRequest = () => {
+      if (!isSaving) {
+        handleSave(false);
+      }
+    };
+
+    window.addEventListener('formDraftSaveRequest', handleSaveRequest);
+    return () => window.removeEventListener('formDraftSaveRequest', handleSaveRequest);
+  }, [isSaving, updateData]);
+
+  const handleSave = useCallback(async (publish: boolean = false) => {
     if (!updateData.title.trim()) {
       toast.error('Başlık zorunludur');
       setActiveTab('general');
@@ -164,7 +195,9 @@ const UpdateEditor = () => {
 
         if (error) throw error;
         toast.success(publish ? 'Güncelleme yayınlandı!' : 'Güncelleme oluşturuldu!');
+        markAsSaved();
         navigate('/admin');
+        return;
       }
 
       if (publish) {
@@ -174,13 +207,15 @@ const UpdateEditor = () => {
           published_at: new Date().toISOString(),
         }));
       }
+
+      markAsSaved();
     } catch (error) {
       console.error('Save error:', error);
       toast.error('Kaydetme sırasında hata oluştu');
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [updateData, isEditMode, id, user?.id, markAsSaved, navigate]);
 
   if (authLoading || isCheckingAuth) {
     return (
@@ -204,6 +239,16 @@ const UpdateEditor = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Navigation Guard */}
+      <NavigationGuard when={hasUnsavedChanges} />
+
+      {/* Draft Prompt */}
+      <DraftPrompt
+        open={isDraftPromptPending}
+        onLoadDraft={loadDraft}
+        onIgnoreDraft={ignoreDraft}
+      />
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -212,9 +257,12 @@ const UpdateEditor = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="font-bold text-lg">
-                {isEditMode ? 'Güncelleme Düzenle' : 'Yeni Güncelleme'}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="font-bold text-lg">
+                  {isEditMode ? 'Güncelleme Düzenle' : 'Yeni Güncelleme'}
+                </h1>
+                <UnsavedIndicator hasUnsavedChanges={hasUnsavedChanges} />
+              </div>
               <p className="text-sm text-muted-foreground">
                 {updateData.is_published ? 'Yayında' : 'Taslak'}
               </p>
@@ -489,14 +537,16 @@ const UpdateEditor = () => {
                     <Save className="w-4 h-4 mr-2" />
                     Taslak Olarak Kaydet
                   </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={() => handleSave(true)}
-                    disabled={isSaving}
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    {updateData.is_published ? 'Güncelle' : 'Yayınla'}
-                  </Button>
+                  {!updateData.is_published && (
+                    <Button
+                      className="flex-1"
+                      onClick={() => handleSave(true)}
+                      disabled={isSaving}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Yayınla
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
